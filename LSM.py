@@ -72,13 +72,21 @@ def findRegressionCoefficient(basisFuncTotal, Option, pathTotal, timeStepsTotal,
         else:
             response = np.exp(-MarketVariables.r*timeIncrement)*paths[:,timeStep+1]
             covariates = paths[:,timeStep]
-            regressionFit = np.polyfit(covariates,response, basisFuncTotal)
-            coefficientMatrix[:,timeStep]= regressionFit
-            continuationValue = np.polyval(regressionFit,covariates)
-            intrinsicValue = Option.payoff(paths[:,timeStep])
-            #CashFlow from decision wheather to stop or keep option alive
-            cashFlowChoice = np.where(continuationValue>intrinsicValue, response,intrinsicValue)
-            paths[:,timeStep] = cashFlowChoice
+            pathsITM = np.where(Option.payoff(covariates)>0)
+            if(pathsITM[0].size):
+                regressionFit = np.polyfit(covariates[pathsITM],response[pathsITM], basisFuncTotal)
+                coefficientMatrix[:,timeStep]= regressionFit
+                continuationValue = np.polyval(regressionFit,covariates)
+                intrinsicValue = Option.payoff(paths[:,timeStep])
+                #CashFlow from decision wheather to stop or keep option alive
+                cashFlowChoice = np.where(continuationValue>intrinsicValue, response,intrinsicValue)
+                paths[:,timeStep] = response
+                paths[:,timeStep][pathsITM] = cashFlowChoice[pathsITM]
+
+            else:
+                coefficientMatrix[:,timeStep]= 0
+                paths[:,timeStep] = response
+
     return coefficientMatrix
 
 #########
@@ -89,9 +97,9 @@ def findRegressionCoefficient(basisFuncTotal, Option, pathTotal, timeStepsTotal,
 # Use the new path to price the american option
 
 # calling functions
-callOption = Option(strike=40,payoffType="Put", timeToMat=1)
+callOption = Option(strike=44,payoffType="Put", timeToMat=1)
 MarketVariablesEx1 = MarketVariables(r=0.06,vol=0.02, spot=40)
-regressionCoefficient = findRegressionCoefficient(basisFuncTotal=2, Option=callOption, pathTotal=100, timeStepsTotal=50, MarketVariables=MarketVariablesEx1)
+regressionCoefficient = findRegressionCoefficient(basisFuncTotal=2, Option=callOption, pathTotal=10^6, timeStepsTotal=50, MarketVariables=MarketVariablesEx1)
 
 2+2
 
