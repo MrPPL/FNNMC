@@ -77,7 +77,7 @@ def findRegressionCoefficient(simulatedPaths, basisFuncTotal, Option, MarketVari
                 regressionFit = np.polyfit(covariates[pathsITM],response[pathsITM], basisFuncTotal)
                 coefficientMatrix[:,timeStep]= regressionFit
                 continuationValue = np.polyval(regressionFit,covariates)
-                intrinsicValue = Option.payoff(simulatedPaths[:,timeStep],1)
+                intrinsicValue = Option.payoff(simulatedPaths[:,timeStep])
                 #CashFlow from decision wheather to stop or keep option alive
                 cashFlowChoice = np.where(continuationValue>intrinsicValue, response,intrinsicValue)
                 simulatedPaths[:,timeStep] = response
@@ -106,7 +106,7 @@ def priceAmericanOption(coefficientMatrix, simulatedPaths, Option, MarketVariabl
             continuationValue = np.exp(-MarketVariables.r*timeIncrement)*simulatedPaths[:,timeStep+1]
             covariates = simulatedPaths[:,timeStep]
             expectedContinuationValue = np.polyval(coefficientMatrix[:,timeStep], covariates)
-            intrinsicValue = Option.payoff(simulatedPaths[:,timeStep],1)
+            intrinsicValue = Option.payoff(simulatedPaths[:,timeStep])
             simulatedPaths[:,timeStep]= np.where(intrinsicValue>expectedContinuationValue, intrinsicValue, continuationValue)
     return simulatedPaths[:,1].mean()*np.exp(-MarketVariables.r*timeIncrement)
 
