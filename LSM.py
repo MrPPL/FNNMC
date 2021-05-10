@@ -64,7 +64,7 @@ def findRegressionCoefficient(basisFuncTotal, Option, pathTotal, timeStepsTotal,
     paths = generateSDEStockPaths(pathTotal, timeStepsTotal, Option.timeToMat, MarketVariables)
     coefficientMatrix = np.empty((basisFuncTotal+1,timeStepsTotal))
     timeIncrement = Option.timeToMat/timeStepsTotal
-    for timeStep in range(timeStepsTotal,0,-1):
+    for timeStep in range(timeStepsTotal,-1,-1):
         #Get payoff at maturity
         if(timeStep==timeStepsTotal):
             paths[:,timeStep] = Option.payoff(paths[:,timeStep])
@@ -81,6 +81,7 @@ def findRegressionCoefficient(basisFuncTotal, Option, pathTotal, timeStepsTotal,
                 #CashFlow from decision wheather to stop or keep option alive
                 cashFlowChoice = np.where(continuationValue>intrinsicValue, response,intrinsicValue)
                 paths[:,timeStep] = response
+                #overwrite the default keep the option alive, if it is beneficial to exercise for the ITM paths.
                 paths[:,timeStep][pathsITM] = cashFlowChoice[pathsITM]
 
             else:
@@ -93,14 +94,31 @@ def findRegressionCoefficient(basisFuncTotal, Option, pathTotal, timeStepsTotal,
 # Pricing Phase
 #########
 
-# Simulate a new set a path for pricing
-# Use the new path to price the american option
+def priceAmericanOption(coefficientMatrix, pathTotal, timeStepsTotal, MarketVariables, Option):
+    # Simulate a new set a path for pricing
+    paths = generateSDEStockPaths(pathTotal, timeStepsTotal, Option.timeToMat, MarketVariables)
+    timeIncrement = Option.timeToMat/timeStepsTotal
+    for timeStep in range(timeStepsTotal,-1,-1):
+        #Get payoff at maturity
+        if(timeStep==timeStepsTotal):
+            paths[:,timeStep] = Option.payoff(paths[:,timeStep])
+        #Use coefficientMatrix and paths to price american option 
+        else:
+            continuationValue = np.exp(-MarketVariables.r*timeIncrement)*paths[:,timeStep+1]
+            covariates = paths[:,timeStep]
+            expectedContinuationValue = np.polyval(coefficientMatrix[:,timeStep], covariates)
+            intrinsicValue = Option.payoff(paths[:,timeStep])
+            paths[:,timeStep]= np.where(intrinsicValue>expectedContinuationValue, intrinsicValue, continuationValue)
+    return paths[:,0].mean()
 
+################
 # calling functions
-callOption = Option(strike=44,payoffType="Put", timeToMat=1)
-MarketVariablesEx1 = MarketVariables(r=0.06,vol=0.02, spot=40)
-regressionCoefficient = findRegressionCoefficient(basisFuncTotal=2, Option=callOption, pathTotal=10^6, timeStepsTotal=50, MarketVariables=MarketVariablesEx1)
-
-2+2
+################
+timeStepsTotal = 50
+putOption = Option(strike=40,payoffType="Put", timeToMat=1)
+MarketVariablesEx1 = MarketVariables(r=0.06,vol=0.2, spot=40)
+regressionCoefficient = findRegressionCoefficient(basisFuncTotal=3, Option=putOption, pathTotal=10^5, timeStepsTotal=timeStepsTotal, MarketVariables=MarketVariablesEx1)
+priceAmer = priceAmericanOption(coefficientMatrix=regressionCoefficient, pathTotal=1000, timeStepsTotal=timeStepsTotal, MarketVariables=MarketVariablesEx1, Option=putOption)
+print(priceAmer)
 
 
