@@ -5,9 +5,9 @@ import pytest
 def test_PricePhase():
     marketVariablesEX = LSM.MarketVariables(r=0.06,vol=0,spot=1)
     putOption = LSM.Option(strike=1.1, payoffType="Put",timeToMat=3)
-    regressionCoef = np.array([[0,2.038,-1.070],
+    regressionCoef = np.array([[0,1.356,-1.813],
                                       [0,-3.335,2.983],
-                                      [0,1.356,-1.813]])
+                                      [0,2.038,-1.070]])
     pricingPaths = np.array([[1,1.09,1.08,1.34],
                              [1, 1.16,1.26,1.54],
                              [1, 1.22, 1.07, 1.03],
