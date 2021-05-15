@@ -111,7 +111,7 @@ def trainNetwork(trainingData, model, lrn_rate, epochs, timeStep):
 ##########
 # Dynamic Regression Phase
 ##########
-class hyperparameters:
+class Hyperparameters:
     # The object holds the "observable" market variables
     def __init__(self, learningRate, hiddenlayer1, hiddenlayer2, epochs, batchSize):
         self.learningRate = learningRate
@@ -167,6 +167,42 @@ def findNeuralNetworkModels(simulatedPaths, Option, MarketVariables, hyperParame
             else:
                 simulatedPaths[:,timeStep] = response
 
+
+#########################
+# Pricing phase
+########################
+
+def priceAmericanOption(simulatedPaths, Option, MarketVariables, hyperparameters):
+    timeStepsTotal = simulatedPaths.shape[1]-1 #time 0 does not count to a timestep
+    timeIncrement = Option.timeToMat/timeStepsTotal
+    regressionModel = Net(hyperparameters.hiddenlayer1, hyperparameters.hiddenlayer2).to(device)
+    regressionModel.eval()
+    for timeStep in range(timeStepsTotal,0,-1):
+        #Get payoff at maturity
+        if(timeStep==timeStepsTotal):
+            simulatedPaths[:,timeStep] = Option.payoff(simulatedPaths[:,timeStep])
+        #Use coefficientMatrix and paths to price american option 
+        else:
+            continuationValue = np.exp(-MarketVariables.r*timeIncrement)*simulatedPaths[:,timeStep+1]
+            covariates = simulatedPaths[:,timeStep]
+            path = ".\\TrainedModels\\" + str("modelAtTimeStep") + \
+                str(timeStep) + ".pth"
+            regressionModel.load_state_dict(torch.load(path))
+            with torch.no_grad():
+                expectedContinuationValue = regressionModel(torch.tensor(covariates.reshape(-1,1), dtype=torch.float32).to(device))            
+            intrinsicValue = Option.payoff(simulatedPaths[:,timeStep])
+            #overwrite the default to keep the option alive, if it is beneficial to keep the exercise for the ITM paths.
+            simulatedPaths[:,timeStep] = continuationValue #default value to keep option alive
+            npExpectedContinuationValue = expectedContinuationValue.numpy().flatten()
+            cashFlowChoice = np.where(intrinsicValue>npExpectedContinuationValue, intrinsicValue, continuationValue)
+            pathsITM = np.where(intrinsicValue>0)
+            simulatedPaths[:,timeStep][pathsITM] = cashFlowChoice[pathsITM]
+    return simulatedPaths[:,1].mean()*np.exp(-MarketVariables.r*timeIncrement)
+
+
+#######################
+# Test functions
+#######################
 def test_MLRegression():
     learningPaths = np.array([[1,1.09,1.08,1.34],
                              [1, 1.16,1.26,1.54],
@@ -178,7 +214,26 @@ def test_MLRegression():
                              [1, 0.88, 1.22, 1.34]])
     marketVariablesEX = LSM.MarketVariables(r=0.06,vol=0,spot=1)
     putOption = LSM.Option(strike=1.1, payoffType="Put",timeToMat=3)
-    hyperParamters = hyperparameters(learningRate=0.001, hiddenlayer1=10, hiddenlayer2=10, epochs=10, batchSize=2)
+    hyperParamters = Hyperparameters(learningRate=0.001, hiddenlayer1=10, hiddenlayer2=10, epochs=10, batchSize=2)
     findNeuralNetworkModels(simulatedPaths=learningPaths, Option=putOption, MarketVariables=marketVariablesEX, hyperParameters=hyperParamters) 
 
 test_MLRegression()
+
+def test_PricePhase():
+    marketVariablesEX = LSM.MarketVariables(r=0.06,vol=0,spot=1)
+    putOption = LSM.Option(strike=1.1, payoffType="Put",timeToMat=3)
+    pricingPaths = np.array([[1,1.09,1.08,1.34],
+                             [1, 1.16,1.26,1.54],
+                             [1, 1.22, 1.07, 1.03],
+                             [1, 0.93, 0.97, 0.92],
+                             [1, 1.11, 1.56, 1.52],
+                             [1, 0.76, 0.77, 0.90],
+                             [1, 0.92, 0.84, 1.01],
+                             [1, 0.88, 1.22, 1.34]])
+
+    hyperparameters = Hyperparameters(learningRate=0.001, hiddenlayer1=10, hiddenlayer2=10, epochs=10, batchSize=2)
+    priceAmerOption = priceAmericanOption(simulatedPaths=pricingPaths, Option=putOption, MarketVariables=marketVariablesEX, 
+        hyperparameters=hyperparameters)
+    return priceAmerOption
+
+test_PricePhase()

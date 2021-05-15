@@ -93,7 +93,6 @@ def findRegressionCoefficient(simulatedPaths, basisFuncTotal, Option, MarketVari
 #########
 
 def priceAmericanOption(coefficientMatrix, simulatedPaths, Option, MarketVariables):
-    # Simulate a new set a path for pricing
     timeStepsTotal = simulatedPaths.shape[1]-1 #time 0 does not count to a timestep
     timeIncrement = Option.timeToMat/timeStepsTotal
     for timeStep in range(timeStepsTotal,0,-1):
