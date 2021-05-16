@@ -10,20 +10,10 @@ The only difference in the regression phase
 import LSM
 import numpy as np
 
-timeStepsTotal = 5
-normalizeStrike=40
-putOption = LSM.Option(strike=1,payoffType="Put", timeToMat=1)
-MarketVariablesEx1 = LSM.MarketVariables(r=0.06,vol=0.2, spot=40/normalizeStrike)
-learningPaths= LSM.generateSDEStockPaths(pathTotal=10**1, timeStepsTotal=timeStepsTotal, timeToMat=putOption.timeToMat, MarketVariables=MarketVariablesEx1)
 #############
 # Data preparation
 #############
 import torch
-tensorPaths = torch.from_numpy(learningPaths)
-train_ldr = torch.utils.data.DataLoader(tensorPaths,
-  batch_size=2, shuffle=True)
-
-
 class regressionDataset(torch.utils.data.Dataset):
     def __init__(self, covariates, response):
         matrixCovariates = covariates.reshape(-1,1)
@@ -45,51 +35,44 @@ class regressionDataset(torch.utils.data.Dataset):
 #########
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 #Design model
-from torch import nn
 class Net(torch.nn.Module):
-  def __init__(self, hiddenSize1, hiddenSize2, ):
+  def __init__(self, hiddenSize1, hiddenSize2):
     super(Net, self).__init__()
-    self.hid1 = torch.nn.Linear(1, hiddenSize1)  # 8-(10-10)-1
+    self.hiddenlayer1 = torch.nn.Linear(1, hiddenSize1)  
     #self.drop1 = torch.nn.Dropout(0.50)
-    self.hid2 = torch.nn.Linear(hiddenSize1, hiddenSize2)
+    self.hiddenlayer2 = torch.nn.Linear(hiddenSize1, hiddenSize2)
     #self.drop2 = torch.nn.Dropout(0.25)
-    self.oupt = torch.nn.Linear(hiddenSize2, 1)
+    self.output = torch.nn.Linear(hiddenSize2, 1)
 
-    torch.nn.init.xavier_uniform_(self.hid1.weight)
-    torch.nn.init.zeros_(self.hid1.bias)
-    torch.nn.init.xavier_uniform_(self.hid2.weight)
-    torch.nn.init.zeros_(self.hid2.bias)
-    torch.nn.init.xavier_uniform_(self.oupt.weight)
-    torch.nn.init.zeros_(self.oupt.bias)
+    torch.nn.init.xavier_uniform_(self.hiddenlayer1.weight)
+    torch.nn.init.zeros_(self.hiddenlayer1.bias)
+    torch.nn.init.xavier_uniform_(self.hiddenlayer2.weight)
+    torch.nn.init.zeros_(self.hiddenlayer2.bias)
+    torch.nn.init.xavier_uniform_(self.output.weight)
+    torch.nn.init.zeros_(self.output.bias)
 
   def forward(self, x):
-    z = torch.relu(self.hid1(x))
+    z = torch.relu(self.hiddenlayer1(x))
     #z = self.drop1(z)
-    z = torch.relu(self.hid2(z))
+    z = torch.relu(self.hiddenlayer2(z))
     #z = self.drop2(z)
-    z = self.oupt(z)  # no activation
+    z = self.output(z)  # no activation
     return z
 
-net = Net(hiddenSize1=10, hiddenSize2=20).to(device)
-#Prepare the training and test data
-#Implement a Dataset object to serve up the data in batches
-#Design and implement a neural network
-#Write code to train the network
-#Write code to evaluate the model (the trained network)
-#Write code to save and use the model to make predictions for new, previously unseen data
-
 ################
-# Training network function
+# Training network 
 ##############
-def trainNetwork(trainingData, model, lrn_rate, epochs, timeStep):
+def trainNetwork(trainingData, model, hyperparameters, timeStep):
+    """The function train the neural network model based on hyperparameters given. 
+    The function saves the trained models in TrainedModels directory"""
     model.train()  # set mode
     loss_func = torch.nn.MSELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=lrn_rate)
-    for epoch in range(0, epochs):
+    optimizer = torch.optim.Adam(model.parameters(), lr=hyperparameters.learningRate)
+    for epoch in range(0, hyperparameters.epochs):
         torch.manual_seed(1 + epoch)  # recovery reproduce
         epoch_loss = 0.0  # sum avg loss per item
         for (batch_idx, batch) in enumerate(trainingData):
-            predictor = batch[0]  
+            predictor = batch[0]
             response = batch[1]  
             optimizer.zero_grad()
             output = model(predictor)            
@@ -121,7 +104,7 @@ class Hyperparameters:
         self.batchSize = batchSize
 
 
-def findNeuralNetworkModels(simulatedPaths, Option, MarketVariables, hyperParameters):
+def findNeuralNetworkModels(simulatedPaths, Option, MarketVariables, hyperparameters):
     # Go backward recursively to find the regression coefficients all the way back to T_1
     # and then store all the trained models 
     timeStepsTotal = simulatedPaths.shape[1]-1
@@ -131,10 +114,10 @@ def findNeuralNetworkModels(simulatedPaths, Option, MarketVariables, hyperParame
         if(timeStep==timeStepsTotal):
             simulatedPaths[:,timeStep] = Option.payoff(simulatedPaths[:,timeStep])
             path = ".\\TrainedModels\\" + str("modelAtTimeStep") + \
-            str(timeStep) + ".pth"
-            torch.save(Net(hyperParameters.hiddenlayer1, hyperParameters.hiddenlayer2).state_dict(), path)
-            print("\nDone ")
-        #Find regressionscoefficients at each exercise dates before maturity
+                str(timeStep) + ".pth"
+        
+            torch.save(Net(hyperparameters.hiddenlayer1, hyperparameters.hiddenlayer2).state_dict(), path)
+        #Find regressionsmodels at each exercise dates before maturity
         else:
             response = np.exp(-MarketVariables.r*timeIncrement)*simulatedPaths[:,timeStep+1]
             covariates = simulatedPaths[:,timeStep]
@@ -142,16 +125,16 @@ def findNeuralNetworkModels(simulatedPaths, Option, MarketVariables, hyperParame
             if(np.shape(pathsITM)[1]):
                 #create dataset for training
                 trainingData = regressionDataset(covariates[pathsITM], response[pathsITM])
-                iterableTrainingData = torch.utils.data.DataLoader(trainingData, batch_size=hyperParameters.batchSize, shuffle=True)
-                regressionModel = Net(hyperParameters.hiddenlayer1, hyperParameters.hiddenlayer2).to(device)
+                iterableTrainingData = torch.utils.data.DataLoader(trainingData, batch_size=hyperparameters.batchSize, shuffle=True)
+                regressionModel = Net(hyperparameters.hiddenlayer1, hyperparameters.hiddenlayer2).to(device)
                 path = ".\\TrainedModels\\" + str("modelAtTimeStep") + \
                 str(timeStep+1) + ".pth"
                 regressionModel.load_state_dict(torch.load(path))
-                trainNetwork(trainingData=iterableTrainingData, model=regressionModel, lrn_rate=hyperParameters.learningRate,
-                   epochs=hyperParameters.epochs, timeStep=timeStep)
+                trainNetwork(trainingData=iterableTrainingData, model=regressionModel, hyperparameters=hyperparameters,
+                    timeStep=timeStep)
 
-                #load model after training set
-                evaluationModel = Net(hyperParameters.hiddenlayer1, hyperParameters.hiddenlayer2).to(device)
+                #load model after training of model
+                evaluationModel = Net(hyperparameters.hiddenlayer1, hyperparameters.hiddenlayer2).to(device)
                 path = ".\\TrainedModels\\" + str("modelAtTimeStep") + \
                 str(timeStep) + ".pth"
                 evaluationModel.load_state_dict(torch.load(path))
@@ -214,8 +197,8 @@ def test_MLRegression():
                              [1, 0.88, 1.22, 1.34]])
     marketVariablesEX = LSM.MarketVariables(r=0.06,vol=0,spot=1)
     putOption = LSM.Option(strike=1.1, payoffType="Put",timeToMat=3)
-    hyperParamters = Hyperparameters(learningRate=0.001, hiddenlayer1=10, hiddenlayer2=10, epochs=10, batchSize=2)
-    findNeuralNetworkModels(simulatedPaths=learningPaths, Option=putOption, MarketVariables=marketVariablesEX, hyperParameters=hyperParamters) 
+    hyperParameters = Hyperparameters(learningRate=0.001, hiddenlayer1=100, hiddenlayer2=100, epochs=10, batchSize=2)
+    findNeuralNetworkModels(simulatedPaths=learningPaths, Option=putOption, MarketVariables=marketVariablesEX, hyperparameters=hyperParameters) 
 
 test_MLRegression()
 
@@ -231,9 +214,21 @@ def test_PricePhase():
                              [1, 0.92, 0.84, 1.01],
                              [1, 0.88, 1.22, 1.34]])
 
-    hyperparameters = Hyperparameters(learningRate=0.001, hiddenlayer1=10, hiddenlayer2=10, epochs=10, batchSize=2)
+    hyperparameters = Hyperparameters(learningRate=0.001, hiddenlayer1=100, hiddenlayer2=100, epochs=1, batchSize=2)
     priceAmerOption = priceAmericanOption(simulatedPaths=pricingPaths, Option=putOption, MarketVariables=marketVariablesEX, 
         hyperparameters=hyperparameters)
     return priceAmerOption
 
-test_PricePhase()
+print(test_PricePhase())
+
+
+#timeStepsTotal = 50
+#normalizeStrike=40
+#putOption = LSM.Option(strike=1,payoffType="Put", timeToMat=1)
+#marketVariablesEx1 = LSM.MarketVariables(r=0.06,vol=0.2, spot=40/normalizeStrike)
+#learningPaths= LSM.generateSDEStockPaths(pathTotal=1*10**5, timeStepsTotal=timeStepsTotal, timeToMat=putOption.timeToMat, MarketVariables=marketVariablesEx1)
+#hyperparameters = Hyperparameters(learningRate=0.001, hiddenlayer1=10, hiddenlayer2=10, epochs=10, batchSize=10**4)
+#findNeuralNetworkModels(simulatedPaths=learningPaths, Option=putOption, MarketVariables=marketVariablesEx1, hyperparameters=hyperparameters)
+#pricingPaths = LSM.generateSDEStockPaths(pathTotal=1*10**5, timeStepsTotal=timeStepsTotal, timeToMat=putOption.timeToMat, MarketVariables=marketVariablesEx1)
+#price = priceAmericanOption(simulatedPaths=pricingPaths, Option=putOption, MarketVariables=marketVariablesEx1, hyperparameters=hyperparameters)*normalizeStrike
+#print("Price of American put: ", price)
