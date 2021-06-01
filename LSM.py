@@ -8,10 +8,11 @@ import numpy as np
 
 class MarketVariables:
     # The object holds the "observable" market variables
-    def __init__(self, r, vol, spot):
+    def __init__(self, r=0, vol=0, spot=0, correlation=0):
         self.r = r
         self.vol = vol
         self.spot = spot
+        self.correlation = correlation
 
 class Option:
     #Give the option to price either a call or put option

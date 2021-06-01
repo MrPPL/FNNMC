@@ -1,5 +1,5 @@
-.venv/*
 .vscode/*
+.venv/*
 TrainedModels/*
 __pycache__/LSM.cpython-39.pyc
 __pycache__/test_LSM.cpython-39-pytest-6.2.4.pyc
