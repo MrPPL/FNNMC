@@ -78,7 +78,8 @@ def simulatePaths(timeStepsTotal, pathsTotal, marketVariables, timeToMat):
     Args:
         timeStepsTotal ([int]): [Total number of exercise dates]
         pathsTotal ([int]): [Total number of simulated paths]
-        spots ([vector of doubles]): [The current price of the underlying stocks]
+        marketVariables ([Object]): [Object containing the market variables]
+        timeToMat ([doubles]): [Time to maturity of option]
     Returns:
         [3D Matrix: [A matrix contining all the simulated paths]
     """
@@ -94,6 +95,6 @@ def simulatePaths(timeStepsTotal, pathsTotal, marketVariables, timeToMat):
 
 
 if __name__ == '__main__':
-    marketVariables = MarketVariables(r=0.03, vol=0.2, spots=[40,50], correlation=0.2)
+    marketVariables = MarketVariables(r=0.03, vol=0.2, spots=[40,50, 10], correlation=0.2)
     learningPaths = simulatePaths(timeStepsTotal=50,pathsTotal=10**3, marketVariables=marketVariables, timeToMat=1)
     pass
