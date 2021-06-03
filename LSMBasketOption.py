@@ -70,7 +70,7 @@ def findRegressionCoefficient(simulatedPaths, basisFuncTotal, Option, MarketVari
             ValueMatrix[:,timeStep] = Option.payoff(simulatedPaths[timeStep,:,:])
         #Find regressionscoefficients at each exercise dates before maturity
         else:
-            response = np.exp(-MarketVariables.r*timeIncrement)*ValueMatrix[:,timeStep+1]
+            response = np.exp((-MarketVariables.r)*timeIncrement)*ValueMatrix[:,timeStep+1]
             currentSpots = simulatedPaths[timeStep,:,:]
             covariates = generateDesignMatrix(currentSpots)
             pathsITM = np.where(Option.payoff(currentSpots)>0)
@@ -94,10 +94,38 @@ def findRegressionCoefficient(simulatedPaths, basisFuncTotal, Option, MarketVari
 #########
 # Pricing
 #########
+def priceAmericanOption(coefficientMatrix, simulatedPaths, Option, MarketVariables):
+    timeStepsTotal = simulatedPaths.shape[0]-1 #time 0 does not count to a timestep
+    timeIncrement = Option.timeToMaturity/timeStepsTotal
+    ValueMatrix=np.zeros((simulatedPaths.shape[1], timeStepsTotal+1))
+    for timeStep in range(timeStepsTotal,0,-1):
+        #Get payoff at maturity
+        if(timeStep==timeStepsTotal):
+            ValueMatrix[:,timeStep] = Option.payoff(simulatedPaths[timeStep,:,:])
+        #Use coefficientMatrix and paths to price american option 
+        else:
+            continuationValue = np.exp((-MarketVariables.r)*timeIncrement)*ValueMatrix[:,timeStep+1]
+            currentSpots = simulatedPaths[timeStep,:,:]
+            covariates = generateDesignMatrix(currentSpots)
+            expectedContinuationValue = np.matmul(covariates, coefficientMatrix[:,timeStep])
+            intrinsicValue = Option.payoff(currentSpots)
+            #overwrite the default to keep the option alive, if it is beneficial to keep the exercise for the ITM paths.
+            ValueMatrix[:,timeStep] = continuationValue #default value to keep option alive
+            cashFlowChoice = np.where(intrinsicValue>expectedContinuationValue, intrinsicValue, continuationValue)
+
+            pathsITM = np.where(intrinsicValue>0)
+            ValueMatrix[:,timeStep][pathsITM] = cashFlowChoice[pathsITM]
+
+    return ValueMatrix[:,1].mean()*np.exp(-MarketVariables.r*timeIncrement)
+
 
 if __name__ == '__main__':
-    callMax = Option(timeToMaturity=1, strike=40, typeOfContract="CallMax")
-    marketVariables = SimGBMMultidimensions.MarketVariables(r=0, vol=0.2, spots=[40,40], correlation=0.8)
-    paths = SimGBMMultidimensions.simulatePaths(timeStepsTotal=5,pathsTotal=4, marketVariables=marketVariables, timeToMat=callMax.timeToMaturity)
-    coefMatrix = findRegressionCoefficient(simulatedPaths=paths, basisFuncTotal=7, Option=callMax, MarketVariables=marketVariables)
-    pass
+    timeStepsTotal = 9
+    normalizeStrike=100
+    callMax = Option(timeToMaturity=3, strike=1, typeOfContract="CallMax")
+    marketVariables = SimGBMMultidimensions.MarketVariables(r=0.05, dividend=0.0, vol=0.2, spots=[100/normalizeStrike,100/normalizeStrike], correlation=0.0)
+    learningPaths = SimGBMMultidimensions.simulatePaths(timeStepsTotal=timeStepsTotal,pathsTotal=1*10**4, marketVariables=marketVariables, timeToMat=callMax.timeToMaturity)
+    coefMatrix = findRegressionCoefficient(simulatedPaths=learningPaths, basisFuncTotal=7, Option=callMax, MarketVariables=marketVariables)
+    pricingPaths = SimGBMMultidimensions.simulatePaths(timeStepsTotal=timeStepsTotal,pathsTotal=1*10**4, marketVariables=marketVariables, timeToMat=callMax.timeToMaturity)
+    price = priceAmericanOption(coefMatrix,pricingPaths,callMax, marketVariables)*normalizeStrike
+    print(price)

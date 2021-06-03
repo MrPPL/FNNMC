@@ -16,8 +16,9 @@ rng = Generator(PCG64(123)) #set seed and get generator object
 #########
 class MarketVariables:
     # The object holds the "observable" market variables
-    def __init__(self, r=0, vol=0, spots=[0], correlation=0):
+    def __init__(self, r=0, dividend=0, vol=0, spots=[0], correlation=0):
         self.r = r
+        self.dividend = dividend
         self.vol = vol
         self.spots = spots
         self.correlation = correlation
@@ -42,7 +43,7 @@ def initialState(pathsTotal, spots, assetsTotal):
 def GBMUpdate(spot, marketVariables, timeIncrement, lowerTriangleMatrixRow):
     #Calculate the next step for stock
     rNormVec = rng.standard_normal(len(lowerTriangleMatrixRow))
-    drift = (marketVariables.r-marketVariables.vol/2)*timeIncrement
+    drift = (marketVariables.r-marketVariables.dividend-marketVariables.vol/2)*timeIncrement
     volTerm = np.sqrt(timeIncrement) * np.dot(lowerTriangleMatrixRow,rNormVec)
     return spot*np.exp(drift+volTerm)
 
@@ -95,6 +96,6 @@ def simulatePaths(timeStepsTotal, pathsTotal, marketVariables, timeToMat):
 
 
 if __name__ == '__main__':
-    marketVariables = MarketVariables(r=0.03, vol=0.2, spots=[40,50, 10], correlation=0.2)
+    marketVariables = MarketVariables(r=0.03, dividend=0.1, vol=0.2, spots=[40,50, 10], correlation=0.2)
     learningPaths = simulatePaths(timeStepsTotal=50,pathsTotal=10**3, marketVariables=marketVariables, timeToMat=1)
     pass
