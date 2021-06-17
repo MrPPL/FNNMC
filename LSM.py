@@ -3,8 +3,18 @@
 
 """The script implement the longstaff-schwartz algorithm for pricing american options
 """
-
 import numpy as np
+import time
+import numba
+
+try:
+    @profile
+    def f(x): return x
+except:
+    def profile(func):
+        def inner(*args, **kwargs):
+            return func(*args, **kwargs)
+        return inner
 
 class MarketVariables:
     # The object holds the "observable" market variables
@@ -32,10 +42,8 @@ class Option:
 ##########
 # Simulation
 ##########
-from numpy.random import Generator
-from numpy.random import PCG64
+rng = np.random.Generator(np.random.PCG64(123)) #set seed and get generator object
 
-rng = Generator(PCG64(123)) #set seed and get generator object
 def simulateGaussianRandomVariables(pathTotal, timeStepsTotal):
     #simulate the gaussian random variables for finding the coefficients of the regression
     return rng.standard_normal(size=(pathTotal,timeStepsTotal))
@@ -44,10 +52,11 @@ def generateTimeStepStock(timeIncrement, rNorm, MarketVariables, previousPrice):
     #Use black-scholes transition probability sampling to make one time step for underlying stock
     return previousPrice*np.exp(MarketVariables.r*timeIncrement-timeIncrement*np.square(MarketVariables.vol)*0.5+np.sqrt(timeIncrement)*MarketVariables.vol*rNorm)
 
+@profile
 def generateSDEStockPaths(pathTotal, timeStepsTotal, timeToMat, MarketVariables):
     #Transform the simulations of gaussian random variables to paths of the underlying asset(s)
     rNorm = simulateGaussianRandomVariables(pathTotal, timeStepsTotal)
-    paths = np.empty((pathTotal,timeStepsTotal+1))
+    paths = np.empty((pathTotal,timeStepsTotal+1), order="F")
     paths[:,0] = MarketVariables.spot
     timeIncrement = timeToMat/timeStepsTotal
     for timeStep in range(1,timeStepsTotal+1):
@@ -57,7 +66,7 @@ def generateSDEStockPaths(pathTotal, timeStepsTotal, timeToMat, MarketVariables)
 ##########
 # Regression Phase
 ##########
-
+@numba.jit
 def findRegressionCoefficient(simulatedPaths, basisFuncTotal, Option, MarketVariables):
     # Go backward recursively to find the regression coefficients all the way back to T_1
     # and then store all the regression coefficients
@@ -67,10 +76,10 @@ def findRegressionCoefficient(simulatedPaths, basisFuncTotal, Option, MarketVari
     for timeStep in range(timeStepsTotal,0,-1):
         #Get payoff at maturity
         if(timeStep==timeStepsTotal):
-            simulatedPaths[:,timeStep] = Option.payoff(simulatedPaths[:,timeStep])
+            response = Option.payoff(simulatedPaths[:,timeStep])
         #Find regressionscoefficients at each exercise dates before maturity
         else:
-            response = np.exp(-MarketVariables.r*timeIncrement)*simulatedPaths[:,timeStep+1]
+            response = np.exp(-MarketVariables.r*timeIncrement)*response
             covariates = simulatedPaths[:,timeStep]
             pathsITM = np.where(Option.payoff(covariates)>0)
             if(np.shape(pathsITM)[1]):
@@ -78,21 +87,18 @@ def findRegressionCoefficient(simulatedPaths, basisFuncTotal, Option, MarketVari
                 coefficientMatrix[:,timeStep]= regressionFit
                 expectedContinuationValue = np.polyval(regressionFit,covariates)
                 intrinsicValue = Option.payoff(simulatedPaths[:,timeStep])
-                simulatedPaths[:,timeStep] = response
                 #overwrite the default to keep the option alive, if it is beneficial to keep the exercise for the ITM paths.
                 #CashFlow from decision wheather to stop or keep option alive
                 cashFlowChoice = np.where(intrinsicValue>expectedContinuationValue, intrinsicValue, response)
-                simulatedPaths[:,timeStep][pathsITM] = cashFlowChoice[pathsITM]
+                response[pathsITM] = cashFlowChoice[pathsITM]
             else:
                 coefficientMatrix[:,timeStep]= 0
-                simulatedPaths[:,timeStep] = response
-
     return coefficientMatrix
 
 #########
 # Pricing Phase
 #########
-
+@profile
 def priceAmericanOption(coefficientMatrix, simulatedPaths, Option, MarketVariables):
     timeStepsTotal = simulatedPaths.shape[1]-1 #time 0 does not count to a timestep
     timeIncrement = Option.timeToMat/timeStepsTotal
@@ -123,22 +129,38 @@ if __name__ == '__main__':
     timeStepsTotal = 50
     normalizeStrike=40
     putOption = Option(strike=1,payoffType="Put", timeToMat=1)
-    for spot1 in range(36,46,2):
-        MarketVariablesEx1 = MarketVariables(r=0.06,vol=0.2, spot=spot1/normalizeStrike)
-        learningPaths= generateSDEStockPaths(pathTotal=10**5, timeStepsTotal=timeStepsTotal, timeToMat=putOption.timeToMat, MarketVariables=MarketVariablesEx1)
-        regressionCoefficient = findRegressionCoefficient(basisFuncTotal=5, Option=putOption, simulatedPaths=learningPaths, MarketVariables=MarketVariablesEx1)
-        pricingPaths= generateSDEStockPaths(pathTotal=10**5, timeStepsTotal=timeStepsTotal, timeToMat=putOption.timeToMat, MarketVariables=MarketVariablesEx1)
-        priceAmerPut = priceAmericanOption(coefficientMatrix=regressionCoefficient, Option=putOption , simulatedPaths=pricingPaths, MarketVariables=MarketVariablesEx1)*normalizeStrike
-        print("Spot: ", spot1, "Price American Put: ", priceAmerPut)
+    MarketVariablesEx1 = MarketVariables(r=0.06,vol=0.2, spot=40/normalizeStrike)
+    timeSimulationStart = time.time()
+    learningPaths= generateSDEStockPaths(pathTotal=10**6, timeStepsTotal=timeStepsTotal, timeToMat=putOption.timeToMat, MarketVariables=MarketVariablesEx1)
+    timeSimulationEnd = time.time()
+    print(f"Time taken for simulation {timeSimulationEnd-timeSimulationStart:f}")
+    timeRegressionStart = time.time()
+    regressionCoefficient = findRegressionCoefficient(basisFuncTotal=5, Option=putOption, simulatedPaths=learningPaths, MarketVariables=MarketVariablesEx1)
+    timeRegressionEnd = time.time()
+    print(f"Time taken for regression {timeRegressionEnd-timeRegressionStart:f}")
+    pricingPaths= generateSDEStockPaths(pathTotal=10**6, timeStepsTotal=timeStepsTotal, timeToMat=putOption.timeToMat, MarketVariables=MarketVariablesEx1)
+    timePriceStart = time.time()
+    priceAmerPut = priceAmericanOption(coefficientMatrix=regressionCoefficient, Option=putOption , simulatedPaths=pricingPaths, MarketVariables=MarketVariablesEx1)*normalizeStrike
+    timePriceEnd = time.time()
+    print(f"Time taken for Pricing {timePriceEnd-timePriceStart:f}")
+    print(f"Spot: {40:3d} and the price American Put: {priceAmerPut:f}")
+
+    #for spot1 in range(36,46,2):
+    #    MarketVariablesEx1 = MarketVariables(r=0.06,vol=0.2, spot=spot1/normalizeStrike)
+    #    learningPaths= generateSDEStockPaths(pathTotal=10**5, timeStepsTotal=timeStepsTotal, timeToMat=putOption.timeToMat, MarketVariables=MarketVariablesEx1)
+    #    regressionCoefficient = findRegressionCoefficient(basisFuncTotal=5, Option=putOption, simulatedPaths=learningPaths, MarketVariables=MarketVariablesEx1)
+    #    pricingPaths= generateSDEStockPaths(pathTotal=10**5, timeStepsTotal=timeStepsTotal, timeToMat=putOption.timeToMat, MarketVariables=MarketVariablesEx1)
+    #    priceAmerPut = priceAmericanOption(coefficientMatrix=regressionCoefficient, Option=putOption , simulatedPaths=pricingPaths, MarketVariables=MarketVariablesEx1)*normalizeStrike
+    #    print("Spot: ", spot1, "Price American Put: ", priceAmerPut)
         
 
     #Price American call aka european call
-    timeStepsTotal = 50
-    normalizeStrike=40
-    putOption = Option(strike=1,payoffType="Call", timeToMat=1)
-    MarketVariablesEx1 = MarketVariables(r=0.06,vol=0.2, spot=1)
-    learningPaths= generateSDEStockPaths(pathTotal=10**5, timeStepsTotal=timeStepsTotal, timeToMat=putOption.timeToMat, MarketVariables=MarketVariablesEx1)
-    regressionCoefficient = findRegressionCoefficient(basisFuncTotal=2, Option=putOption, simulatedPaths=learningPaths, MarketVariables=MarketVariablesEx1)
-    pricingPaths= generateSDEStockPaths(pathTotal=10**4, timeStepsTotal=timeStepsTotal, timeToMat=putOption.timeToMat, MarketVariables=MarketVariablesEx1)
-    priceAmerCall = priceAmericanOption(coefficientMatrix=regressionCoefficient, Option=putOption , simulatedPaths=pricingPaths, MarketVariables=MarketVariablesEx1)*normalizeStrike
-    print("Spot: ", MarketVariablesEx1.spot*normalizeStrike, "American Call Price: ", priceAmerCall)
+    #timeStepsTotal = 50
+    #normalizeStrike=40
+    #putOption = Option(strike=1,payoffType="Call", timeToMat=1)
+    #MarketVariablesEx1 = MarketVariables(r=0.06,vol=0.2, spot=1)
+    #learningPaths= generateSDEStockPaths(pathTotal=10**5, timeStepsTotal=timeStepsTotal, timeToMat=putOption.timeToMat, MarketVariables=MarketVariablesEx1)
+    #regressionCoefficient = findRegressionCoefficient(basisFuncTotal=2, Option=putOption, simulatedPaths=learningPaths, MarketVariables=MarketVariablesEx1)
+    #pricingPaths= generateSDEStockPaths(pathTotal=10**4, timeStepsTotal=timeStepsTotal, timeToMat=putOption.timeToMat, MarketVariables=MarketVariablesEx1)
+    #priceAmerCall = priceAmericanOption(coefficientMatrix=regressionCoefficient, Option=putOption , simulatedPaths=pricingPaths, MarketVariables=MarketVariablesEx1)*normalizeStrike
+    #print("Spot: ", MarketVariablesEx1.spot*normalizeStrike, "American Call Price: ", priceAmerCall)
