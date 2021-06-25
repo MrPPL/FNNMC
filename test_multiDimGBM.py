@@ -1,6 +1,7 @@
 
 from context import SimulationPaths
 from context import LSM
+from context import Products
 from SimulationPaths import SimGBMMultidimensions
 import unittest   # The test framework
 import numpy as np
