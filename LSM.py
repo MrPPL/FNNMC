@@ -7,6 +7,7 @@ import numpy as np
 import time
 import numba
 import SimulationPaths.GBM
+import Products
 
 try:
     @profile
@@ -16,29 +17,6 @@ except:
         def inner(*args, **kwargs):
             return func(*args, **kwargs)
         return inner
-
-class MarketVariables:
-    # The object holds the "observable" market variables
-    def __init__(self, r=0, vol=0, spot=0, correlation=0):
-        self.r = r
-        self.vol = vol
-        self.spot = spot
-        self.correlation = correlation
-
-class Option:
-    #Give the option to price either a call or put option
-    def __init__(self, strike, payoffType, timeToMat):
-        self.strike = strike
-        self.payoffType = payoffType
-        self.timeToMat = timeToMat
-    def payoff(self, underlyingPrice: float):
-        if(self.payoffType=="Call"):
-            return np.maximum(0,underlyingPrice-self.strike)
-        elif(self.payoffType=="Put"):
-            return np.maximum(0,self.strike-underlyingPrice)
-        else:
-            print("Invalid call to function, try check your spelling of Call or Put.")
-            return 0
 
 
 ##########
@@ -98,15 +76,16 @@ def priceAmericanOption(coefficientMatrix, simulatedPaths, Option, MarketVariabl
     return simulatedPaths[:,1].mean()*np.exp(-MarketVariables.r*timeIncrement)
 
 ##########################
-# Testing
+# Testing execution
 ##########################
 if __name__ == '__main__':
     #Price American Put
-    timeStepsPerYear = 50
-    normalizeStrike=40
-    putOption = Option(strike=1,payoffType="Put", timeToMat=1)
-    MarketVariablesEx1 = MarketVariables(r=0.06,vol=0.2, spot=36/normalizeStrike)
-    pathTotal = 10**5
+    timeStepsPerYear = 3
+    normalizeStrike=100
+    spot = 90
+    putOption = Products.Option(timeToMat=1, strike=1,typeOfContract="Call")
+    MarketVariablesEx1 = Products.MarketVariables(r=0.05,vol=0.2, spot=spot/normalizeStrike, dividend=0.1)
+    pathTotal = 10**6
     timeSimulationStart = time.time()
     learningPaths= SimulationPaths.GBM.generateSDEStockPaths(pathTotal=pathTotal, timeStepsPerYear=timeStepsPerYear, timeToMat=putOption.timeToMat, MarketVariables=MarketVariablesEx1)
     timeSimulationEnd = time.time()
@@ -120,7 +99,7 @@ if __name__ == '__main__':
     priceAmerPut = priceAmericanOption(coefficientMatrix=regressionCoefficient, Option=putOption , simulatedPaths=pricingPaths, MarketVariables=MarketVariablesEx1)*normalizeStrike
     timePriceEnd = time.time()
     print(f"Time taken for Pricing {timePriceEnd-timePriceStart:f}")
-    print(f"Spot: {40:3d} and the price American Put: {priceAmerPut:f}")
+    print(f"Spot: {spot:3d} and the price American Put: {priceAmerPut:f}")
 
     #for spot1 in range(36,46,2):
     #    MarketVariablesEx1 = MarketVariables(r=0.06,vol=0.2, spot=spot1/normalizeStrike)

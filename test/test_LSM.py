@@ -1,6 +1,7 @@
 from context import SimulationPaths
 from SimulationPaths import GBM
 from context import LSM # The code to test
+from context import Products
 import unittest   # The test framework
 import numpy as np
 
@@ -16,8 +17,8 @@ class Test_LSM(unittest.TestCase):
                                 [1, 0.76, 0.77, 0.90],
                                 [1, 0.92, 0.84, 1.01],
                                 [1, 0.88, 1.22, 1.34]])
-        marketVariablesEX = LSM.MarketVariables(r=0.06,vol=0,spot=1)
-        putOption = LSM.Option(strike=1.1, payoffType="Put",timeToMat=3)
+        marketVariablesEX = Products.MarketVariables(r=0.06,vol=0,spot=1)
+        putOption = Products.Option(strike=1.1, typeOfContract="Put",timeToMat=3)
         actualRegressionCoef = LSM.findRegressionCoefficient(simulatedPaths=learningPaths, basisFuncTotal=2, Option=putOption, MarketVariables=marketVariablesEX) 
         expectedRegressionCoef = np.array([[0,1.356,-1.813],
                                         [0,-3.335,2.983],
@@ -28,8 +29,8 @@ class Test_LSM(unittest.TestCase):
     def testPricing(self):
         """Follow the example in chapter 1 in LSM paper
         """
-        marketVariablesEX = LSM.MarketVariables(r=0.06,vol=0,spot=1)
-        putOption = LSM.Option(strike=1.1, payoffType="Put",timeToMat=3)
+        marketVariablesEX = Products.MarketVariables(r=0.06,vol=0,spot=1)
+        putOption = Products.Option(strike=1.1, typeOfContract="Put",timeToMat=3)
         regressionCoef = np.array([[0,1.356,-1.813],
                                         [0,-3.335,2.983],
                                         [0,2.038,-1.070]])
@@ -48,14 +49,29 @@ class Test_LSM(unittest.TestCase):
         """
         timeStepsPerYear = 50
         normalizeStrike=40
-        putOption = LSM.Option(strike=1,payoffType="Put", timeToMat=1)
-        MarketVariablesEx1 = LSM.MarketVariables(r=0.06,vol=0.2, spot=36/normalizeStrike)
+        putOption = Products.Option(strike=1,typeOfContract="Put", timeToMat=1)
+        MarketVariablesEx1 = Products.MarketVariables(r=0.06,vol=0.2, spot=36/normalizeStrike)
         pathTotal = 10**5
         learningPaths= SimulationPaths.GBM.generateSDEStockPaths(pathTotal=pathTotal, timeStepsPerYear=timeStepsPerYear, timeToMat=putOption.timeToMat, MarketVariables=MarketVariablesEx1)
         regressionCoefficient = LSM.findRegressionCoefficient(basisFuncTotal=5, Option=putOption, simulatedPaths=learningPaths, MarketVariables=MarketVariablesEx1)
         pricingPaths= SimulationPaths.GBM.generateSDEStockPaths(pathTotal=pathTotal, timeStepsPerYear=timeStepsPerYear, timeToMat=putOption.timeToMat, MarketVariables=MarketVariablesEx1)
         priceAmerPut = LSM.priceAmericanOption(coefficientMatrix=regressionCoefficient, Option=putOption , simulatedPaths=pricingPaths, MarketVariables=MarketVariablesEx1)*normalizeStrike
         self.assertAlmostEqual(first=priceAmerPut,second=4.487,places=1)
+
+    def testDividendCall(self):
+        """Price American call option with dividend replicated from "Pricing American-style securities using simulation" from Broadie and Glasserman
+        """
+        timeStepsPerYear = 3
+        normalizeStrike=100
+        spot = 90
+        callOption = Products.Option(strike=1,typeOfContract="Call", timeToMat=1)
+        MarketVariablesEx1 = Products.MarketVariables(r=0.05,vol=0.2, spot=spot/normalizeStrike, dividend=0.1)
+        pathTotal = 10**6
+        learningPaths= SimulationPaths.GBM.generateSDEStockPaths(pathTotal=pathTotal, timeStepsPerYear=timeStepsPerYear, timeToMat=callOption.timeToMat, MarketVariables=MarketVariablesEx1)
+        regressionCoefficient = LSM.findRegressionCoefficient(basisFuncTotal=5, Option=callOption, simulatedPaths=learningPaths, MarketVariables=MarketVariablesEx1)
+        pricingPaths= SimulationPaths.GBM.generateSDEStockPaths(pathTotal=pathTotal, timeStepsPerYear=timeStepsPerYear, timeToMat=callOption.timeToMat, MarketVariables=MarketVariablesEx1)
+        priceAmerCall = LSM.priceAmericanOption(coefficientMatrix=regressionCoefficient, Option=callOption , simulatedPaths=pricingPaths, MarketVariables=MarketVariablesEx1)*normalizeStrike
+        self.assertAlmostEqual(first=priceAmerCall,second=2.303,places=1)
 
 if __name__ == '__main__':
     unittest.main()

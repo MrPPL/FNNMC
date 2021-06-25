@@ -11,17 +11,6 @@ from numpy.random import Generator
 from numpy.random import PCG64
 rng = Generator(PCG64(123)) #set seed and get generator object
 
-#########
-# Classes
-#########
-class MarketVariables:
-    # The object holds the "observable" market variables
-    def __init__(self, r=0, dividend=0, vol=0, spots=[0], correlation=0):
-        self.r = r
-        self.dividend = dividend
-        self.vol = vol
-        self.spots = spots
-        self.correlation = correlation
 
 #########
 # Functions for simulate paths

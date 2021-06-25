@@ -11,7 +11,7 @@ def simulateGaussianRandomVariables(pathTotal, timeStepsTotal):
 
 def generateTimeStepStock(timeIncrement, rNorm, MarketVariables, previousPrice):
     #Use black-scholes transition probability sampling to make one time step for underlying stock
-    return previousPrice*np.exp(MarketVariables.r*timeIncrement-timeIncrement*np.square(MarketVariables.vol)*0.5+np.sqrt(timeIncrement)*MarketVariables.vol*rNorm)
+    return previousPrice*np.exp(((MarketVariables.r-MarketVariables.dividend)-np.square(MarketVariables.vol)*0.5)*timeIncrement+np.sqrt(timeIncrement)*MarketVariables.vol*rNorm)
 
 def generateSDEStockPaths(pathTotal, timeStepsPerYear, timeToMat, MarketVariables):
     #Transform the simulations of gaussian random variables to paths of the underlying asset(s)
