@@ -6,6 +6,7 @@
 import numpy as np
 import time
 import numba
+import SimulationPaths.GBM
 
 try:
     @profile
@@ -39,34 +40,10 @@ class Option:
             print("Invalid call to function, try check your spelling of Call or Put.")
             return 0
 
-##########
-# Simulation
-##########
-rng = np.random.Generator(np.random.PCG64(123)) #set seed and get generator object
-
-def simulateGaussianRandomVariables(pathTotal, timeStepsTotal):
-    #simulate the gaussian random variables for finding the coefficients of the regression
-    return rng.standard_normal(size=(pathTotal,timeStepsTotal))
-
-def generateTimeStepStock(timeIncrement, rNorm, MarketVariables, previousPrice):
-    #Use black-scholes transition probability sampling to make one time step for underlying stock
-    return previousPrice*np.exp(MarketVariables.r*timeIncrement-timeIncrement*np.square(MarketVariables.vol)*0.5+np.sqrt(timeIncrement)*MarketVariables.vol*rNorm)
-
-@profile
-def generateSDEStockPaths(pathTotal, timeStepsTotal, timeToMat, MarketVariables):
-    #Transform the simulations of gaussian random variables to paths of the underlying asset(s)
-    rNorm = simulateGaussianRandomVariables(pathTotal, timeStepsTotal)
-    paths = np.empty((pathTotal,timeStepsTotal+1), order="F")
-    paths[:,0] = MarketVariables.spot
-    timeIncrement = timeToMat/timeStepsTotal
-    for timeStep in range(1,timeStepsTotal+1):
-        paths[:,timeStep] = generateTimeStepStock(timeIncrement, rNorm[:,timeStep-1], MarketVariables, paths[:,timeStep-1])
-    return paths
 
 ##########
 # Regression Phase
 ##########
-@numba.jit
 def findRegressionCoefficient(simulatedPaths, basisFuncTotal, Option, MarketVariables):
     # Go backward recursively to find the regression coefficients all the way back to T_1
     # and then store all the regression coefficients
@@ -98,7 +75,6 @@ def findRegressionCoefficient(simulatedPaths, basisFuncTotal, Option, MarketVari
 #########
 # Pricing Phase
 #########
-@profile
 def priceAmericanOption(coefficientMatrix, simulatedPaths, Option, MarketVariables):
     timeStepsTotal = simulatedPaths.shape[1]-1 #time 0 does not count to a timestep
     timeIncrement = Option.timeToMat/timeStepsTotal
@@ -126,19 +102,20 @@ def priceAmericanOption(coefficientMatrix, simulatedPaths, Option, MarketVariabl
 ##########################
 if __name__ == '__main__':
     #Price American Put
-    timeStepsTotal = 50
+    timeStepsPerYear = 50
     normalizeStrike=40
     putOption = Option(strike=1,payoffType="Put", timeToMat=1)
-    MarketVariablesEx1 = MarketVariables(r=0.06,vol=0.2, spot=40/normalizeStrike)
+    MarketVariablesEx1 = MarketVariables(r=0.06,vol=0.2, spot=36/normalizeStrike)
+    pathTotal = 10**5
     timeSimulationStart = time.time()
-    learningPaths= generateSDEStockPaths(pathTotal=10**6, timeStepsTotal=timeStepsTotal, timeToMat=putOption.timeToMat, MarketVariables=MarketVariablesEx1)
+    learningPaths= SimulationPaths.GBM.generateSDEStockPaths(pathTotal=pathTotal, timeStepsPerYear=timeStepsPerYear, timeToMat=putOption.timeToMat, MarketVariables=MarketVariablesEx1)
     timeSimulationEnd = time.time()
     print(f"Time taken for simulation {timeSimulationEnd-timeSimulationStart:f}")
     timeRegressionStart = time.time()
     regressionCoefficient = findRegressionCoefficient(basisFuncTotal=5, Option=putOption, simulatedPaths=learningPaths, MarketVariables=MarketVariablesEx1)
     timeRegressionEnd = time.time()
     print(f"Time taken for regression {timeRegressionEnd-timeRegressionStart:f}")
-    pricingPaths= generateSDEStockPaths(pathTotal=10**6, timeStepsTotal=timeStepsTotal, timeToMat=putOption.timeToMat, MarketVariables=MarketVariablesEx1)
+    pricingPaths= SimulationPaths.GBM.generateSDEStockPaths(pathTotal=pathTotal, timeStepsPerYear=timeStepsPerYear, timeToMat=putOption.timeToMat, MarketVariables=MarketVariablesEx1)
     timePriceStart = time.time()
     priceAmerPut = priceAmericanOption(coefficientMatrix=regressionCoefficient, Option=putOption , simulatedPaths=pricingPaths, MarketVariables=MarketVariablesEx1)*normalizeStrike
     timePriceEnd = time.time()

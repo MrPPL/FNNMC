@@ -1,9 +1,13 @@
+from context import SimulationPaths
+from SimulationPaths import GBM
 from context import LSM # The code to test
 import unittest   # The test framework
 import numpy as np
 
 class Test_LSM(unittest.TestCase):
     def testRegresion(self):
+        """Use the regression example in LSM paper chapter 1
+        """
         learningPaths = np.array([[1,1.09,1.08,1.34],
                                 [1, 1.16,1.26,1.54],
                                 [1, 1.22, 1.07, 1.03],
@@ -18,10 +22,12 @@ class Test_LSM(unittest.TestCase):
         expectedRegressionCoef = np.array([[0,1.356,-1.813],
                                         [0,-3.335,2.983],
                                         [0,2.038,-1.070]])
-        self.assertEqual(np.allclose(actualRegressionCoef, expectedRegressionCoef, 0.01), True)
+        self.assertEqual(np.allclose(actualRegressionCoef[:,1:], expectedRegressionCoef[:,1:], 0.01), True)
 
 
     def testPricing(self):
+        """Follow the example in chapter 1 in LSM paper
+        """
         marketVariablesEX = LSM.MarketVariables(r=0.06,vol=0,spot=1)
         putOption = LSM.Option(strike=1.1, payoffType="Put",timeToMat=3)
         regressionCoef = np.array([[0,1.356,-1.813],
@@ -37,5 +43,19 @@ class Test_LSM(unittest.TestCase):
                                 [1, 0.88, 1.22, 1.34]])
         priceAmerOption = LSM.priceAmericanOption(coefficientMatrix=regressionCoef, simulatedPaths=pricingPaths, Option=putOption, MarketVariables=marketVariablesEX)
         self.assertAlmostEqual(first=priceAmerOption,second=0.1144,places=4)
+    def testPut(self):
+        """Follow chapter 3 put example in LSM paper
+        """
+        timeStepsPerYear = 50
+        normalizeStrike=40
+        putOption = LSM.Option(strike=1,payoffType="Put", timeToMat=1)
+        MarketVariablesEx1 = LSM.MarketVariables(r=0.06,vol=0.2, spot=36/normalizeStrike)
+        pathTotal = 10**5
+        learningPaths= SimulationPaths.GBM.generateSDEStockPaths(pathTotal=pathTotal, timeStepsPerYear=timeStepsPerYear, timeToMat=putOption.timeToMat, MarketVariables=MarketVariablesEx1)
+        regressionCoefficient = LSM.findRegressionCoefficient(basisFuncTotal=5, Option=putOption, simulatedPaths=learningPaths, MarketVariables=MarketVariablesEx1)
+        pricingPaths= SimulationPaths.GBM.generateSDEStockPaths(pathTotal=pathTotal, timeStepsPerYear=timeStepsPerYear, timeToMat=putOption.timeToMat, MarketVariables=MarketVariablesEx1)
+        priceAmerPut = LSM.priceAmericanOption(coefficientMatrix=regressionCoefficient, Option=putOption , simulatedPaths=pricingPaths, MarketVariables=MarketVariablesEx1)*normalizeStrike
+        self.assertAlmostEqual(first=priceAmerPut,second=4.487,places=1)
+
 if __name__ == '__main__':
     unittest.main()
