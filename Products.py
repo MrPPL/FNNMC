@@ -27,6 +27,6 @@ class Option():
         elif (self.typeOfContract=="PutGeometricAverage"):
             return np.maximum(0, self.strike - np.prod(spots)**(1/len(spots)))
         elif(self.typeOfContract=="CallMax"):
-            return np.maximum(0, max(spots)-self.strike)
+            return np.maximum(0, np.amax(spots,1)-self.strike)
         else:
             print("Invalid input for the payoff function")

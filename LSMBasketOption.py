@@ -8,14 +8,6 @@
 This script focus on the multidimensional case for rainbow option
 """
 import numpy as np
-import SimGBMMultidimensions
-#########
-# Classes
-#########
-
-class RegressionModel():
-    def linearRegression(self):
-        pass
 
 #########
 # Learning
@@ -38,19 +30,19 @@ def generateDesignMatrix(currentSpots):
 def findRegressionCoefficient(simulatedPaths, basisFuncTotal, Option, MarketVariables):
     # Go backward recursively to find the regression coefficients all the way back to T_1
     # and then store all the regression coefficients
-    timeStepsTotal = np.shape(simulatedPaths)[0]-1
+    timeStepsTotal = np.shape(simulatedPaths)[0]
     pathsTotal = np.shape(simulatedPaths)[1]
     coefficientMatrix = np.zeros((basisFuncTotal,timeStepsTotal))
-    ValueMatrix=np.zeros((pathsTotal, timeStepsTotal+1))
+    ValueMatrix=np.zeros((pathsTotal, timeStepsTotal))
 
-    timeIncrement = Option.timeToMaturity/(timeStepsTotal)
-    for timeStep in range(timeStepsTotal,0,-1):
+    timeIncrement = Option.timeToMat/(timeStepsTotal-1)
+    for timeStep in range(timeStepsTotal-1,0,-1):
         #Get payoff at maturity
-        if(timeStep==timeStepsTotal):
+        if(timeStep== (timeStepsTotal-1) ):
             ValueMatrix[:,timeStep] = Option.payoff(simulatedPaths[timeStep,:,:])
         #Find regressionscoefficients at each exercise dates before maturity
         else:
-            response = np.exp((-MarketVariables.r)*timeIncrement)*ValueMatrix[:,timeStep+1]
+            response = np.exp(-MarketVariables.r*timeIncrement)*ValueMatrix[:,timeStep+1]
             currentSpots = simulatedPaths[timeStep,:,:]
             covariates = generateDesignMatrix(currentSpots)
             pathsITM = np.where(Option.payoff(currentSpots)>0)
@@ -76,7 +68,7 @@ def findRegressionCoefficient(simulatedPaths, basisFuncTotal, Option, MarketVari
 #########
 def priceAmericanOption(coefficientMatrix, simulatedPaths, Option, MarketVariables):
     timeStepsTotal = simulatedPaths.shape[0]-1 #time 0 does not count to a timestep
-    timeIncrement = Option.timeToMaturity/timeStepsTotal
+    timeIncrement = Option.timeToMat/timeStepsTotal
     ValueMatrix=np.zeros((simulatedPaths.shape[1], timeStepsTotal+1))
     for timeStep in range(timeStepsTotal,0,-1):
         #Get payoff at maturity
@@ -84,7 +76,7 @@ def priceAmericanOption(coefficientMatrix, simulatedPaths, Option, MarketVariabl
             ValueMatrix[:,timeStep] = Option.payoff(simulatedPaths[timeStep,:,:])
         #Use coefficientMatrix and paths to price american option 
         else:
-            continuationValue = np.exp((-MarketVariables.r)*timeIncrement)*ValueMatrix[:,timeStep+1]
+            continuationValue = np.exp(-MarketVariables.r*timeIncrement)*ValueMatrix[:,timeStep+1]
             currentSpots = simulatedPaths[timeStep,:,:]
             covariates = generateDesignMatrix(currentSpots)
             expectedContinuationValue = np.matmul(covariates, coefficientMatrix[:,timeStep])
@@ -98,14 +90,28 @@ def priceAmericanOption(coefficientMatrix, simulatedPaths, Option, MarketVariabl
 
     return ValueMatrix[:,1].mean()*np.exp(-MarketVariables.r*timeIncrement)
 
+import Products
+import SimulationPaths.GBMMultiDim
+import time
 
 if __name__ == '__main__':
     timeStepsTotal = 9
     normalizeStrike=100
-    callMax = Option(timeToMaturity=3, strike=1, typeOfContract="CallMax")
-    marketVariables = SimGBMMultidimensions.MarketVariables(r=0.05, dividend=0.0, vol=0.2, spots=[100/normalizeStrike,100/normalizeStrike], correlation=0.0)
-    learningPaths = SimGBMMultidimensions.simulatePaths(timeStepsTotal=timeStepsTotal,pathsTotal=1*10**4, marketVariables=marketVariables, timeToMat=callMax.timeToMaturity)
+    pathTotal = 10**5
+    callMax = Products.Option(timeToMat=3, strike=1, typeOfContract="CallMax")
+    marketVariables = Products.MarketVariables(r=0.05, dividend=0.1, vol=0.2, spot=[100/normalizeStrike,100/normalizeStrike], correlation=0.0)
+    timeSimPathsStart = time.time()
+    learningPaths = SimulationPaths.GBMMultiDim.simulatePaths(timeStepsTotal=timeStepsTotal,pathsTotal=pathTotal, marketVariables=marketVariables, timeToMat=callMax.timeToMat)
+    timeSimPathsEnd = time.time()
+    print(f"Time taken to simulate paths is: {timeSimPathsEnd-timeSimPathsStart:f}")
+
+    timeRegressionStart = time.time()
     coefMatrix = findRegressionCoefficient(simulatedPaths=learningPaths, basisFuncTotal=7, Option=callMax, MarketVariables=marketVariables)
-    pricingPaths = SimGBMMultidimensions.simulatePaths(timeStepsTotal=timeStepsTotal,pathsTotal=1*10**4, marketVariables=marketVariables, timeToMat=callMax.timeToMaturity)
+    timeRegressionEnd = time.time()
+    print(f"Time taken for find regressioncoefficients: {timeRegressionEnd-timeRegressionStart:f}")
+    pricingPaths = SimulationPaths.GBMMultiDim.simulatePaths(timeStepsTotal=timeStepsTotal,pathsTotal=pathTotal, marketVariables=marketVariables, timeToMat=callMax.timeToMat)
+    timePriceStart = time.time()
     price = priceAmericanOption(coefMatrix,pricingPaths,callMax, marketVariables)*normalizeStrike
-    print(price)
+    timePriceEnd = time.time()
+    print(f"Time taken for Pricing: {timePriceEnd-timePriceStart:f}")
+    print(f"The estimated price is: {price:f} and the true price is: 13.9")
