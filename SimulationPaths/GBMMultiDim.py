@@ -75,9 +75,9 @@ def updateState(currentState, marketVariables, timeIncrement):
     lowerTriangleMatrix = choleskyLowerTriangular(assetsTotal, marketVariables.vol, marketVariables.correlation)
     for path in range(pathsTotal):
         rNormVec = rng.standard_normal(assetsTotal)
-        for assetIndex in range(assetsTotal):
-            newState[path,assetIndex] = GBMUpdate(spot=currentState[path,assetIndex], marketVariables=marketVariables, timeIncrement=timeIncrement, 
-                lowerTriangleMatrixRow=lowerTriangleMatrix[assetIndex,:], normVec=rNormVec)
+        newState[path,:] = [GBMUpdate(spot=currentState[path,assetIndex], marketVariables=marketVariables, timeIncrement=timeIncrement,
+            lowerTriangleMatrixRow=lowerTriangleMatrix[assetIndex,:], normVec=rNormVec) for assetIndex in range(assetsTotal)]
+
     return newState
 
 
@@ -93,7 +93,7 @@ def simulatePaths(timeStepsTotal, pathsTotal, marketVariables, timeToMat):
         [3D Matrix: [A matrix contining all the simulated paths]
     """
     assetsTotal = len(marketVariables.spot)
-    pathMatrix = np.zeros((timeStepsTotal+1,pathsTotal, assetsTotal))
+    pathMatrix = np.zeros((timeStepsTotal+1,pathsTotal, assetsTotal), order="F")
     timeIncrement = timeToMat/timeStepsTotal
     for timeStep in range(timeStepsTotal+1):
         if timeStep==0:
@@ -105,7 +105,7 @@ def simulatePaths(timeStepsTotal, pathsTotal, marketVariables, timeToMat):
 
 if __name__ == '__main__':
     marketVariables = Products.MarketVariables(r=0.03, vol=0.2, spot=[40,50, 10], dividend=0.1, correlation=0.2)
-    pathTotal = 10**1
+    pathTotal = 10**5
     exerciseDatesTotal=3
     pathSimulationTimeStart = time.time()
     learningPaths = simulatePaths(timeStepsTotal=exerciseDatesTotal,pathsTotal=pathTotal, marketVariables=marketVariables, timeToMat=1)

@@ -17,28 +17,28 @@ from sklearn.preprocessing import PolynomialFeatures
 
 def generateDesignMatrix(currentSpots):
     #add intercept
-    transformer = PolynomialFeatures(degree=1, interaction_only=False, include_bias=True)
+    transformer = PolynomialFeatures(degree=1, interaction_only=False, include_bias=False)
     transformer.fit(currentSpots)
     basisfunctions = transformer.transform(currentSpots)
-    basisfunctions = np.append(basisfunctions, np.power(basisfunctions[:,1],2).reshape(-1,1), axis=1)
-    basisfunctions = np.append(basisfunctions, np.power(basisfunctions[:,2],2).reshape(-1,1), axis=1)
-    basisfunctions = np.append(basisfunctions, np.power(basisfunctions[:,1],3).reshape(-1,1), axis=1)
-    basisfunctions = np.append(basisfunctions, np.power(basisfunctions[:,2],3).reshape(-1,1), axis=1)
+    #basisfunctions = np.append(basisfunctions, np.power(basisfunctions[:,1],2).reshape(-1,1), axis=1)
+    #basisfunctions = np.append(basisfunctions, np.power(basisfunctions[:,2],2).reshape(-1,1), axis=1)
+    #basisfunctions = np.append(basisfunctions, np.power(basisfunctions[:,1],3).reshape(-1,1), axis=1)
+    #basisfunctions = np.append(basisfunctions, np.power(basisfunctions[:,2],3).reshape(-1,1), axis=1)
     return basisfunctions
 
 
 def findRegressionCoefficient(simulatedPaths, basisFuncTotal, Option, MarketVariables):
     # Go backward recursively to find the regression coefficients all the way back to T_1
     # and then store all the regression coefficients
-    timeStepsTotal = np.shape(simulatedPaths)[0]
+    timeStepsTotal = np.shape(simulatedPaths)[0]-1
     pathsTotal = np.shape(simulatedPaths)[1]
     coefficientMatrix = np.zeros((basisFuncTotal,timeStepsTotal))
-    ValueMatrix=np.zeros((pathsTotal, timeStepsTotal))
+    ValueMatrix=np.zeros((pathsTotal, timeStepsTotal+1))
 
-    timeIncrement = Option.timeToMat/(timeStepsTotal-1)
-    for timeStep in range(timeStepsTotal-1,0,-1):
+    timeIncrement = Option.timeToMat/(timeStepsTotal)
+    for timeStep in range(timeStepsTotal,0,-1):
         #Get payoff at maturity
-        if(timeStep== (timeStepsTotal-1) ):
+        if(timeStep== (timeStepsTotal) ):
             ValueMatrix[:,timeStep] = Option.payoff(simulatedPaths[timeStep,:,:])
         #Find regressionscoefficients at each exercise dates before maturity
         else:
@@ -48,7 +48,7 @@ def findRegressionCoefficient(simulatedPaths, basisFuncTotal, Option, MarketVari
             pathsITM = np.where(Option.payoff(currentSpots)>0)
             if(np.shape(pathsITM)[1]):
                 regressionFit = LinearRegression().fit(covariates[pathsITM],response[pathsITM])
-                coefficientMatrix[:,timeStep]= regressionFit.coef_
+                coefficientMatrix[:,timeStep]= np.insert(regressionFit.coef_, 0, regressionFit.intercept_)
                 expectedContinuationValue = regressionFit.predict(covariates)
                 intrinsicValue = Option.payoff(currentSpots)
 
@@ -79,7 +79,7 @@ def priceAmericanOption(coefficientMatrix, simulatedPaths, Option, MarketVariabl
             continuationValue = np.exp(-MarketVariables.r*timeIncrement)*ValueMatrix[:,timeStep+1]
             currentSpots = simulatedPaths[timeStep,:,:]
             covariates = generateDesignMatrix(currentSpots)
-            expectedContinuationValue = np.matmul(covariates, coefficientMatrix[:,timeStep])
+            expectedContinuationValue = np.matmul(covariates, coefficientMatrix[1:,timeStep])+ coefficientMatrix[0,timeStep]
             intrinsicValue = Option.payoff(currentSpots)
             #overwrite the default to keep the option alive, if it is beneficial to keep the exercise for the ITM paths.
             ValueMatrix[:,timeStep] = continuationValue #default value to keep option alive
