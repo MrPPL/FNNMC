@@ -7,14 +7,15 @@
 This script focus on the multidimensional case for rainbow option
 """
 import numpy as np
-from numpy.random import Generator
+from numpy.random import Generator, seed
 from numpy.random import PCG64
 import os
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import Products
 import time
-rng = Generator(PCG64(123)) #set seed and get generator object
+rng = Generator(PCG64(seed=123)) #set seed and get generator object
+#rng = Generator(PCG64()) #set seed and get generator object
 
 
 #########

@@ -26,7 +26,7 @@ class Test_LSMMultiDim(unittest.TestCase):
         [1.05, 1.07]]])
         marketVariablesEX = Products.MarketVariables(r=0.00,vol=0,spot=1)
         callMaxOption = Products.Option(strike=1.0, typeOfContract="CallMax",timeToMat=2)
-        actualRegressionCoef = LSMBasketOption.findRegressionCoefficient(simulatedPaths=learningPaths, basisFuncTotal=3, Option=callMaxOption, MarketVariables=marketVariablesEX) 
+        actualRegressionCoef = LSMBasketOption.findRegressionCoefficient(simulatedPaths=learningPaths, Option=callMaxOption, MarketVariables=marketVariablesEX, regressionBasis="Base") 
         expectedRegressionCoef = np.array([[0,3.87],
                                         [0,-1.7],
                                         [0,-2.00]])
@@ -56,7 +56,7 @@ class Test_LSMMultiDim(unittest.TestCase):
 
         regressionCoef = np.array([[0,3.87], [0,-1.7], [0,-2]])
 
-        actualPrice = LSMBasketOption.priceAmericanOption(coefficientMatrix=regressionCoef, simulatedPaths=learningPaths, Option=callMaxOption, MarketVariables=marketVariablesEX)
+        actualPrice = LSMBasketOption.priceAmericanOption(coefficientMatrix=regressionCoef, simulatedPaths=learningPaths, Option=callMaxOption, MarketVariables=marketVariablesEX, regressionBasis="Base")
         expectedPrice = 0.098
         self.assertAlmostEqual(first=actualPrice,second=expectedPrice,places=3)
 

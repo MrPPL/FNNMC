@@ -25,7 +25,9 @@ class Option():
         elif (self.typeOfContract=="Call"):
             return np.maximum(0,spots - self.strike)
         elif (self.typeOfContract=="PutGeometricAverage"):
-            return np.maximum(0, self.strike - np.prod(spots)**(1/len(spots)))
+            return np.maximum(0, self.strike - np.prod(spots,1)**(1/spots.shape[1]))
+        elif (self.typeOfContract=="CallGeometricAverage"):
+            return np.maximum(0, np.prod(spots,1)**(1/spots.shape[1]) - self.strike)
         elif(self.typeOfContract=="CallMax"):
             return np.maximum(0, np.amax(spots,1)-self.strike)
         else:
