@@ -24,13 +24,12 @@ def generateDesignMatrix(currentSpots, Option, regressionBasis):
     if (regressionBasis=="Base"):
         pass
     elif (regressionBasis=="secondOrderPoly"):
-        basisfunctions = np.append(basisfunctions, np.power(basisfunctions[:,0],2).reshape(-1,1), axis=1)
-        basisfunctions = np.append(basisfunctions, np.power(basisfunctions[:,1],2).reshape(-1,1), axis=1)
+        for i in range(currentSpots.shape[1]):
+            basisfunctions = np.append(basisfunctions, np.power(basisfunctions[:,i],2).reshape(-1,1), axis=1)
     elif (regressionBasis=="thirdOrderPoly"):
-        basisfunctions = np.append(basisfunctions, np.power(basisfunctions[:,0],2).reshape(-1,1), axis=1)
-        basisfunctions = np.append(basisfunctions, np.power(basisfunctions[:,1],2).reshape(-1,1), axis=1)
-        basisfunctions = np.append(basisfunctions, np.power(basisfunctions[:,1],3).reshape(-1,1), axis=1)
-        basisfunctions = np.append(basisfunctions, np.power(basisfunctions[:,2],3).reshape(-1,1), axis=1)
+        for i in range(currentSpots.shape[1]):
+            basisfunctions = np.append(basisfunctions, np.power(basisfunctions[:,i],2).reshape(-1,1), axis=1)
+            basisfunctions = np.append(basisfunctions, np.power(basisfunctions[:,i],3).reshape(-1,1), axis=1)
     elif (regressionBasis=="bestConfigCallMax"):
         basisfunctions = np.append(basisfunctions, np.power(basisfunctions[:,0],2).reshape(-1,1), axis=1)
         basisfunctions = np.append(basisfunctions, np.power(basisfunctions[:,1],2).reshape(-1,1), axis=1)
@@ -106,11 +105,11 @@ import SimulationPaths.GBMMultiDim
 import time
 
 if __name__ == '__main__':
-    timeStepsTotal = 9
+    timeStepsTotal = 10
     normalizeStrike=100
-    pathTotal = 10**1
-    callMax = Products.Option(timeToMat=3, strike=1, typeOfContract="CallGeometricAverage")
-    marketVariables = Products.MarketVariables(r=0.05, dividend=0.1, vol=0.2, spot=[100/normalizeStrike,100/normalizeStrike], correlation=0.0)
+    pathTotal = 10**5
+    callMax = Products.Option(timeToMat=1, strike=1, typeOfContract="CallGeometricAverage")
+    marketVariables = Products.MarketVariables(r=0.03, dividend=0.05, vol=0.4, spot=[100/normalizeStrike]*7, correlation=0.0)
 
     # create empirical estimations
     timeSimPathsStart = time.time()
@@ -119,12 +118,12 @@ if __name__ == '__main__':
     print(f"Time taken to simulate paths is: {timeSimPathsEnd-timeSimPathsStart:f}")
 
     timeRegressionStart = time.time()
-    coefMatrix = findRegressionCoefficient(simulatedPaths=learningPaths, Option=callMax, MarketVariables=marketVariables, regressionBasis="Base")
+    coefMatrix = findRegressionCoefficient(simulatedPaths=learningPaths, Option=callMax, MarketVariables=marketVariables, regressionBasis="thirdOrderPoly")
     timeRegressionEnd = time.time()
     print(f"Time taken for find regressioncoefficients: {timeRegressionEnd-timeRegressionStart:f}")
     pricingPaths = SimulationPaths.GBMMultiDim.simulatePaths(timeStepsTotal=timeStepsTotal,pathsTotal=pathTotal, marketVariables=marketVariables, timeToMat=callMax.timeToMat)
     timePriceStart = time.time()
-    price = priceAmericanOption(coefMatrix,pricingPaths,callMax, marketVariables, "Base")*normalizeStrike
+    price = priceAmericanOption(coefMatrix,pricingPaths,callMax, marketVariables, "thirdOrderPoly")*normalizeStrike
     timePriceEnd = time.time()
     print(f"Time taken for Pricing: {timePriceEnd-timePriceStart:f}")
     print(f"The estimated price is: {price:f} and the true price is: 13.9")
