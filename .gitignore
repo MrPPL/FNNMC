@@ -1,6 +1,15 @@
 .vscode/*
 .venv/*
 TrainedModels/*
+data/*
 __pycache__/LSM.cpython-39.pyc
 __pycache__/test_LSM.cpython-39-pytest-6.2.4.pyc
 __pycache__/test_pytest.cpython-39-pytest-6.2.4.pyc
+__pycache__/FNNMC.cpython-39.pyc
+__pycache__/FNNMCMultiDim.cpython-39.pyc
+__pycache__/LSMBasketOption.cpython-39.pyc
+__pycache__/LSMMultiDim.cpython-39.pyc
+__pycache__/LSMBasketOption.cpython-39.pyc
+test/__pycache__/context.cpython-39.pyc
+test/__pycache__/context.cpython-39.pyc
+__pycache__/LSMBasketOption.cpython-39.pyc

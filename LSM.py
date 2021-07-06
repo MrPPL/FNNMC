@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""The script implement the longstaff-schwartz algorithm for pricing american options
+"""The script implement the longstaff-schwartz algorithm for pricing american options for univariate claims
 """
 import numpy as np
 import time
@@ -80,26 +80,33 @@ def priceAmericanOption(coefficientMatrix, simulatedPaths, Option, MarketVariabl
 ##########################
 if __name__ == '__main__':
     #Price American Put
-    timeStepsPerYear = 3
-    normalizeStrike=100
-    spot = 90
-    putOption = Products.Option(timeToMat=1, strike=1,typeOfContract="Call")
-    MarketVariablesEx1 = Products.MarketVariables(r=0.05,vol=0.2, spot=spot/normalizeStrike, dividend=0.1)
-    pathTotal = 10**6
+    timeStepsPerYear = 10
+    normalizeStrike=40
+    spot = 36
+    putOption = Products.Option(timeToMat=1, strike=1,typeOfContract="Put")
+    MarketVariablesEx1 = Products.MarketVariables(r=0.06,vol=0.2, spot=spot/normalizeStrike, dividend=0.0)
+    pathTotal = 10**4
     timeSimulationStart = time.time()
-    learningPaths= SimulationPaths.GBM.generateSDEStockPaths(pathTotal=pathTotal, timeStepsPerYear=timeStepsPerYear, timeToMat=putOption.timeToMat, MarketVariables=MarketVariablesEx1)
+    learningPaths= SimulationPaths.GBM.generateSDEStockPaths(pathTotal=10**6, timeStepsPerYear=timeStepsPerYear, timeToMat=putOption.timeToMat, MarketVariables=MarketVariablesEx1)
     timeSimulationEnd = time.time()
     print(f"Time taken for simulation {timeSimulationEnd-timeSimulationStart:f}")
     timeRegressionStart = time.time()
-    regressionCoefficient = findRegressionCoefficient(basisFuncTotal=5, Option=putOption, simulatedPaths=learningPaths, MarketVariables=MarketVariablesEx1)
+    regressionCoefficient = findRegressionCoefficient(basisFuncTotal=3, Option=putOption, simulatedPaths=learningPaths, MarketVariables=MarketVariablesEx1)
     timeRegressionEnd = time.time()
     print(f"Time taken for regression {timeRegressionEnd-timeRegressionStart:f}")
-    pricingPaths= SimulationPaths.GBM.generateSDEStockPaths(pathTotal=pathTotal, timeStepsPerYear=timeStepsPerYear, timeToMat=putOption.timeToMat, MarketVariables=MarketVariablesEx1)
-    timePriceStart = time.time()
-    priceAmerPut = priceAmericanOption(coefficientMatrix=regressionCoefficient, Option=putOption , simulatedPaths=pricingPaths, MarketVariables=MarketVariablesEx1)*normalizeStrike
-    timePriceEnd = time.time()
-    print(f"Time taken for Pricing {timePriceEnd-timePriceStart:f}")
-    print(f"Spot: {spot:3d} and the price American Put: {priceAmerPut:f}")
+    repeat =100
+    estimates = np.zeros(repeat)
+    for i in range(repeat):
+        # create empirical estimations
+        pricingPaths= SimulationPaths.GBM.generateSDEStockPaths(pathTotal=pathTotal, timeStepsPerYear=timeStepsPerYear, timeToMat=putOption.timeToMat, MarketVariables=MarketVariablesEx1)
+        timePriceStart = time.time()
+        priceAmerPut = priceAmericanOption(coefficientMatrix=regressionCoefficient, Option=putOption , simulatedPaths=pricingPaths, MarketVariables=MarketVariablesEx1)*normalizeStrike
+        timePriceEnd = time.time()
+        print(f"Time taken for Pricing {timePriceEnd-timePriceStart:f}")
+        print(f"Spot: {spot:3d} and the price American Put: {priceAmerPut:f}")
+        estimates[i]=priceAmerPut
+    print("Mean: ", np.mean(estimates))
+    print("Std Error Mean: ", np.std(estimates)/np.sqrt(repeat))
 
     #for spot1 in range(36,46,2):
     #    MarketVariablesEx1 = MarketVariables(r=0.06,vol=0.2, spot=spot1/normalizeStrike)

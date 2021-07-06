@@ -35,6 +35,10 @@ def generateDesignMatrix(currentSpots, Option, regressionBasis):
         basisfunctions = np.append(basisfunctions, np.power(basisfunctions[:,1],2).reshape(-1,1), axis=1)
         basisfunctions = np.append(basisfunctions, np.multiply(basisfunctions[:,0], basisfunctions[:,1]).reshape(-1,1), axis=1)
         basisfunctions = np.append(basisfunctions, Option.payoff(basisfunctions[:,:2]).reshape(-1,1), axis=1)
+    elif (regressionBasis=="geometricAverage"):
+        for i in range(currentSpots.shape[1]):
+            basisfunctions = np.append(basisfunctions, np.power(basisfunctions[:,i],2).reshape(-1,1), axis=1)
+        basisfunctions = np.append(basisfunctions, Option.payoff(basisfunctions[:,:7]).reshape(-1,1), axis=1)
 
     return (basisfunctions, basisfunctions.shape[1])
 
@@ -107,13 +111,13 @@ import time
 if __name__ == '__main__':
     timeStepsTotal = 10
     normalizeStrike=100
-    pathTotal = 10**5
+    pathTotal = 10**4
     callMax = Products.Option(timeToMat=1, strike=1, typeOfContract="CallGeometricAverage")
     marketVariables = Products.MarketVariables(r=0.03, dividend=0.05, vol=0.4, spot=[100/normalizeStrike]*7, correlation=0.0)
 
     # create empirical estimations
     timeSimPathsStart = time.time()
-    learningPaths = SimulationPaths.GBMMultiDim.simulatePaths(timeStepsTotal=timeStepsTotal,pathsTotal=pathTotal, marketVariables=marketVariables, timeToMat=callMax.timeToMat)
+    learningPaths = SimulationPaths.GBMMultiDim.simulatePaths(timeStepsTotal=timeStepsTotal,pathsTotal=10**6, marketVariables=marketVariables, timeToMat=callMax.timeToMat)
     timeSimPathsEnd = time.time()
     print(f"Time taken to simulate paths is: {timeSimPathsEnd-timeSimPathsStart:f}")
 
@@ -126,4 +130,4 @@ if __name__ == '__main__':
     price = priceAmericanOption(coefMatrix,pricingPaths,callMax, marketVariables, "thirdOrderPoly")*normalizeStrike
     timePriceEnd = time.time()
     print(f"Time taken for Pricing: {timePriceEnd-timePriceStart:f}")
-    print(f"The estimated price is: {price:f} and the true price is: 13.9")
+    print(f"The estimated price is: {price:f} and the true price is: 3.24")
