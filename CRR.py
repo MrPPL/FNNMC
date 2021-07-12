@@ -84,6 +84,6 @@ def findPayoff(steps, maturity, spot, vol, strike, r):
     return expecTree
 
 if __name__ == '__main__':
-    print(findPayoff(steps=10**4, maturity=1, spot=36, vol=0.2, strike=40, r=0.06)['0.0'])
+    print(findPayoff(steps=50, maturity=1, spot=36, vol=0.2, strike=40, r=0.06)['0.0'])
 
     #print(findPayoff(steps=200, maturity=2, spot=S, vol=0.4, strike=40, r=0.06)['0.0'])

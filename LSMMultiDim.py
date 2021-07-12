@@ -38,7 +38,7 @@ def generateDesignMatrix(currentSpots, Option, regressionBasis):
     elif (regressionBasis=="geometricAverage"):
         for i in range(currentSpots.shape[1]):
             basisfunctions = np.append(basisfunctions, np.power(basisfunctions[:,i],2).reshape(-1,1), axis=1)
-        basisfunctions = np.append(basisfunctions, Option.payoff(basisfunctions[:,:7]).reshape(-1,1), axis=1)
+        basisfunctions = np.append(basisfunctions, Option.payoff(basisfunctions[:,:currentSpots.shape[1]]).reshape(-1,1), axis=1)
 
     return (basisfunctions, basisfunctions.shape[1])
 
