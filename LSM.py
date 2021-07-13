@@ -59,21 +59,20 @@ def priceAmericanOption(coefficientMatrix, simulatedPaths, Option, MarketVariabl
     for timeStep in range(timeStepsTotal,0,-1):
         #Get payoff at maturity
         if(timeStep==timeStepsTotal):
-            simulatedPaths[:,timeStep] = Option.payoff(simulatedPaths[:,timeStep])
+            continuationValue = Option.payoff(simulatedPaths[:,timeStep])
         #Use coefficientMatrix and paths to price american option 
         else:
-            continuationValue = np.exp(-MarketVariables.r*timeIncrement)*simulatedPaths[:,timeStep+1]
+            continuationValue = np.exp(-MarketVariables.r*timeIncrement)*continuationValue
             covariates = simulatedPaths[:,timeStep]
             expectedContinuationValue = np.polyval(coefficientMatrix[:,timeStep], covariates)
             intrinsicValue = Option.payoff(simulatedPaths[:,timeStep])
             #overwrite the default to keep the option alive, if it is beneficial to keep the exercise for the ITM paths.
-            simulatedPaths[:,timeStep] = continuationValue #default value to keep option alive
             cashFlowChoice = np.where(intrinsicValue>expectedContinuationValue, intrinsicValue, continuationValue)
 
             pathsITM = np.where(intrinsicValue>0)
-            simulatedPaths[:,timeStep][pathsITM] = cashFlowChoice[pathsITM]
+            continuationValue[pathsITM] = cashFlowChoice[pathsITM]
 
-    return simulatedPaths[:,1].mean()*np.exp(-MarketVariables.r*timeIncrement)
+    return continuationValue.mean()*np.exp(-MarketVariables.r*timeIncrement)
 
 ##########################
 # Testing execution

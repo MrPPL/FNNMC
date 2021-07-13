@@ -84,7 +84,8 @@ def trainNetwork(trainingData, model, hyperparameters, timeStep):
         if epoch % 100 == 0:
             print(" epoch = %4d   loss = %0.4f" % \
             (epoch, epoch_loss))
-
+    if (hyperparameters.trainOnlyLastTimeStep==True):
+        hyperparameters.epochs = 1
     path = ".\\TrainedModels\\" + str("modelAtTimeStep") + \
     str(timeStep) + ".pth"
     torch.save(model.state_dict(), path)
@@ -96,12 +97,13 @@ def trainNetwork(trainingData, model, hyperparameters, timeStep):
 ##########
 class Hyperparameters:
     # The object holds the "observable" market variables
-    def __init__(self, learningRate, hiddenlayer1, hiddenlayer2, epochs, batchSize):
+    def __init__(self, learningRate, hiddenlayer1, hiddenlayer2, epochs, batchSize, trainOnlyLastTimeStep=False):
         self.learningRate = learningRate
         self.hiddenlayer1 = hiddenlayer1
         self.hiddenlayer2 = hiddenlayer2
         self.epochs = epochs
         self.batchSize = batchSize
+        self.trainOnlyLastTimeStep= trainOnlyLastTimeStep
 
 
 def findNeuralNetworkModels(simulatedPaths, Option, MarketVariables, hyperparameters):
@@ -112,14 +114,14 @@ def findNeuralNetworkModels(simulatedPaths, Option, MarketVariables, hyperparame
     for timeStep in range(timeStepsTotal,0,-1):
         #Get payoff at maturity
         if(timeStep==timeStepsTotal):
-            simulatedPaths[:,timeStep] = Option.payoff(simulatedPaths[:,timeStep])
+            response = Option.payoff(simulatedPaths[:,timeStep])
             path = ".\\TrainedModels\\" + str("modelAtTimeStep") + \
                 str(timeStep) + ".pth"
         
             torch.save(Net(hyperparameters.hiddenlayer1, hyperparameters.hiddenlayer2).state_dict(), path)
         #Find regressionsmodels at each exercise dates before maturity
         else:
-            response = np.exp(-MarketVariables.r*timeIncrement)*simulatedPaths[:,timeStep+1]
+            response = np.exp(-MarketVariables.r*timeIncrement)*response
             covariates = simulatedPaths[:,timeStep]
             pathsITM = np.where(Option.payoff(covariates)>0)
             if(np.shape(pathsITM)[1]):
@@ -141,14 +143,13 @@ def findNeuralNetworkModels(simulatedPaths, Option, MarketVariables, hyperparame
                 with torch.no_grad():
                     expectedContinuationValue = evaluationModel(torch.tensor(covariates.reshape(-1,1), dtype=torch.float32).to(device))
                 intrinsicValue = Option.payoff(simulatedPaths[:,timeStep])
-                simulatedPaths[:,timeStep] = response
                 #overwrite the default to keep the option alive, if it is beneficial to keep the exercise for the ITM paths.
                 #CashFlow from decision wheather to stop or keep option alive
                 npExpectedContinuationValue = expectedContinuationValue.numpy().flatten()
                 cashFlowChoice = np.where(intrinsicValue>npExpectedContinuationValue, intrinsicValue, response)
-                simulatedPaths[:,timeStep][pathsITM] = cashFlowChoice[pathsITM]
+                response[pathsITM] = cashFlowChoice[pathsITM]
             else:
-                simulatedPaths[:,timeStep] = response
+                pass
 
 
 #########################
@@ -163,10 +164,10 @@ def priceAmericanOption(simulatedPaths, Option, MarketVariables, hyperparameters
     for timeStep in range(timeStepsTotal,0,-1):
         #Get payoff at maturity
         if(timeStep==timeStepsTotal):
-            simulatedPaths[:,timeStep] = Option.payoff(simulatedPaths[:,timeStep])
+            continuationValue = Option.payoff(simulatedPaths[:,timeStep])
         #Use coefficientMatrix and paths to price american option 
         else:
-            continuationValue = np.exp(-MarketVariables.r*timeIncrement)*simulatedPaths[:,timeStep+1]
+            continuationValue = np.exp(-MarketVariables.r*timeIncrement)*continuationValue
             covariates = simulatedPaths[:,timeStep]
             path = ".\\TrainedModels\\" + str("modelAtTimeStep") + \
                 str(timeStep) + ".pth"
@@ -175,12 +176,11 @@ def priceAmericanOption(simulatedPaths, Option, MarketVariables, hyperparameters
                 expectedContinuationValue = regressionModel(torch.tensor(covariates.reshape(-1,1), dtype=torch.float32).to(device))            
             intrinsicValue = Option.payoff(simulatedPaths[:,timeStep])
             #overwrite the default to keep the option alive, if it is beneficial to keep the exercise for the ITM paths.
-            simulatedPaths[:,timeStep] = continuationValue #default value to keep option alive
             npExpectedContinuationValue = expectedContinuationValue.numpy().flatten()
             cashFlowChoice = np.where(intrinsicValue>npExpectedContinuationValue, intrinsicValue, continuationValue)
             pathsITM = np.where(intrinsicValue>0)
-            simulatedPaths[:,timeStep][pathsITM] = cashFlowChoice[pathsITM]
-    return simulatedPaths[:,1].mean()*np.exp(-MarketVariables.r*timeIncrement)
+            continuationValue[pathsITM] = cashFlowChoice[pathsITM]
+    return continuationValue.mean()*np.exp(-MarketVariables.r*timeIncrement)
 
 import Products
 import SimulationPaths.GBM
@@ -194,7 +194,7 @@ if __name__ == '__main__':
     putOption = Products.Option(strike=1,typeOfContract="Put", timeToMat=1)
     marketVariablesEx1 = Products.MarketVariables(r=0.06,vol=0.2, spot=spot/normalizeStrike)
     learningPaths= SimulationPaths.GBM.generateSDEStockPaths(pathTotal=10**6, timeStepsPerYear=timeStepsTotal, timeToMat=putOption.timeToMat, MarketVariables=marketVariablesEx1)
-    hyperparameters = Hyperparameters(learningRate=0.001, hiddenlayer1=10, hiddenlayer2=10, epochs=100, batchSize=10**4)
+    hyperparameters = Hyperparameters(learningRate=0.001, hiddenlayer1=100, hiddenlayer2=100, epochs=10, batchSize=10**4, trainOnlyLastTimeStep=True)
     findNeuralNetworkModels(simulatedPaths=learningPaths, Option=putOption, MarketVariables=marketVariablesEx1, hyperparameters=hyperparameters)
     
 
