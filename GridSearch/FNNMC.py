@@ -51,9 +51,10 @@ class Net(torch.nn.Module):
     torch.nn.init.zeros_(self.output.bias)
 
   def forward(self, x):
-    relu=torch.nn.ReLU()
-    #elu=torch.nn.ELU()
-    z = relu(self.hiddenlayer1(x))
+    #relu=torch.nn.ReLU()
+    #Leakyrelu=torch.nn.LeakyReLU(negative_slope=0.01)
+    Leakyrelu=torch.nn.LeakyReLU(negative_slope=0.3)
+    z = Leakyrelu(self.hiddenlayer1(x))
     #z = self.drop1(z)
     #z = relu(self.hiddenlayer2(z))
     #z = self.drop2(z)
@@ -82,9 +83,8 @@ def trainNetwork(trainingData, model, hyperparameters, timeStep):
             loss_val.backward()
             optimizer.step()
 
-        if epoch % 100 == 0:
-            print(" epoch = %4d   loss = %0.4f" % \
-            (epoch, epoch_loss))
+        print(" epoch = %4d   loss = %0.4f" % \
+        (epoch, epoch_loss))
         if (hyperparameters.trainOnlyLastTimeStep==True):
             hyperparameters.epochs = 1
 
