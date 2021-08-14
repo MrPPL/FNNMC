@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python
 # PyTorch 1.8.1-CPU virtual env.
 # Python 3.9.4 Windows 10
@@ -34,18 +35,18 @@ class regressionDataset(torch.utils.data.Dataset):
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 #Design model
 class Net(torch.nn.Module):
-  def __init__(self, inputSize, hiddenSize1, hiddenSize2):
+  def __init__(self, inputSize, hiddenSize1):
     super(Net, self).__init__()
     self.hiddenlayer1 = torch.nn.Linear(inputSize, hiddenSize1)  
     #self.drop1 = torch.nn.Dropout(0.25)
-    self.hiddenlayer2 = torch.nn.Linear(hiddenSize1, hiddenSize2)
+    #self.hiddenlayer2 = torch.nn.Linear(hiddenSize1, hiddenSize2)
     #self.drop2 = torch.nn.Dropout(0.25)
-    self.output = torch.nn.Linear(hiddenSize2, 1)
+    self.output = torch.nn.Linear(hiddenSize1, 1)
 
     torch.nn.init.xavier_uniform_(self.hiddenlayer1.weight)
     torch.nn.init.zeros_(self.hiddenlayer1.bias)
-    torch.nn.init.xavier_uniform_(self.hiddenlayer2.weight)
-    torch.nn.init.zeros_(self.hiddenlayer2.bias)
+    #torch.nn.init.xavier_uniform_(self.hiddenlayer2.weight)
+    #torch.nn.init.zeros_(self.hiddenlayer2.bias)
     torch.nn.init.xavier_uniform_(self.output.weight)
     torch.nn.init.zeros_(self.output.bias)
 
@@ -54,7 +55,7 @@ class Net(torch.nn.Module):
     #elu=torch.nn.ELU()
     z = relu(self.hiddenlayer1(x))
     #z = self.drop1(z)
-    z = relu(self.hiddenlayer2(z))
+    #z = relu(self.hiddenlayer2(z))
     #z = self.drop2(z)
     z = self.output(z)  # no activation
     return z
@@ -98,11 +99,11 @@ def trainNetwork(trainingData, model, hyperparameters, timeStep):
 ##########
 class Hyperparameters:
     # The object holds the "observable" market variables
-    def __init__(self, learningRate, inputSize, hiddenlayer1, hiddenlayer2, epochs, batchSize, trainOnlyLastTimeStep=False):
+    def __init__(self, learningRate, inputSize, hiddenlayer1, epochs, batchSize, trainOnlyLastTimeStep=False):
         self.learningRate = learningRate
         self.inputSize = inputSize
         self.hiddenlayer1 = hiddenlayer1
-        self.hiddenlayer2 = hiddenlayer2
+        #self.hiddenlayer2 = hiddenlayer2
         self.epochs = epochs
         self.batchSize = batchSize
         self.trainOnlyLastTimeStep= trainOnlyLastTimeStep
@@ -122,7 +123,7 @@ def findNeuralNetworkModels(simulatedPaths, Option, MarketVariables, hyperparame
             ValueVec = Option.payoff(simulatedPaths[timeStep,:,:])
             path = ".\\TrainedModels\\" + str("modelAtTimeStep") + \
                 str(timeStep) + ".pth"
-            torch.save(Net(hyperparameters.inputSize, hyperparameters.hiddenlayer1, hyperparameters.hiddenlayer2).state_dict(), path)
+            torch.save(Net(hyperparameters.inputSize, hyperparameters.hiddenlayer1).state_dict(), path)
         #Find regressionscoefficients at each exercise dates before maturity
         else:
             response = np.exp(-MarketVariables.r*timeIncrement)*ValueVec
@@ -132,14 +133,14 @@ def findNeuralNetworkModels(simulatedPaths, Option, MarketVariables, hyperparame
                 #create dataset for training
                 trainingData = regressionDataset(currentSpots[pathsITM], response[pathsITM])
                 iterableTrainingData = torch.utils.data.DataLoader(trainingData, batch_size=hyperparameters.batchSize, shuffle=True)
-                regressionModel = Net(hyperparameters.inputSize ,hyperparameters.hiddenlayer1, hyperparameters.hiddenlayer2).to(device)
+                regressionModel = Net(hyperparameters.inputSize ,hyperparameters.hiddenlayer1).to(device)
                 path = ".\\TrainedModels\\" + str("modelAtTimeStep") + \
                 str(timeStep+1) + ".pth"
                 regressionModel.load_state_dict(torch.load(path))
                 trainNetwork(trainingData=iterableTrainingData, model=regressionModel, hyperparameters=hyperparameters,
                     timeStep=timeStep)
                 #load model after training of model
-                evaluationModel = Net(hyperparameters.inputSize, hyperparameters.hiddenlayer1, hyperparameters.hiddenlayer2).to(device)
+                evaluationModel = Net(hyperparameters.inputSize, hyperparameters.hiddenlayer1).to(device)
                 path = ".\\TrainedModels\\" + str("modelAtTimeStep") + \
                 str(timeStep) + ".pth"
                 evaluationModel.load_state_dict(torch.load(path))
@@ -161,7 +162,7 @@ def findNeuralNetworkModels(simulatedPaths, Option, MarketVariables, hyperparame
 def priceAmericanOption(simulatedPaths, Option, MarketVariables, hyperparameters):
     timeStepsTotal = simulatedPaths.shape[0]-1 #time 0 does not count to a timestep
     timeIncrement = Option.timeToMat/timeStepsTotal
-    regressionModel = Net(hyperparameters.inputSize,hyperparameters.hiddenlayer1, hyperparameters.hiddenlayer2).to(device)
+    regressionModel = Net(hyperparameters.inputSize,hyperparameters.hiddenlayer1).to(device)
     regressionModel.eval()
     for timeStep in range(timeStepsTotal,0,-1):
         #Get payoff at maturity
@@ -186,37 +187,3 @@ def priceAmericanOption(simulatedPaths, Option, MarketVariables, hyperparameters
             ValueVec[pathsITM] = cashFlowChoice[pathsITM]
 
     return ValueVec.mean()*np.exp(-MarketVariables.r*timeIncrement)
-
-import Products
-import SimulationPaths.GBMMultiDim
-import time
-
-if __name__ == '__main__':
-    timeStepsTotal = 9
-    normalizeStrike=100
-    pathTotal = 10**4
-    callMax = Products.Option(timeToMat=3, strike=1, typeOfContract="CallMax")
-    marketVariables = Products.MarketVariables(r=0.05, dividend=0.10, vol=0.2, spot=[100/normalizeStrike]*2, correlation=0.0)
-    hyperparameters = Hyperparameters(learningRate=0.001, inputSize=2, hiddenlayer1=10, hiddenlayer2=10, epochs=10, batchSize=10**4)
-
-    estimates = np.zeros(100)
-    timeSimPathsStart = time.time()
-    learningPaths = SimulationPaths.GBMMultiDim.simulatePaths(timeStepsTotal=timeStepsTotal,pathsTotal=10**6, marketVariables=marketVariables, timeToMat=callMax.timeToMat)
-    timeSimPathsEnd = time.time()
-    print(f"Time taken to simulate paths is: {timeSimPathsEnd-timeSimPathsStart:f}")
-
-    timeRegressionStart = time.time()
-    findNeuralNetworkModels(simulatedPaths=learningPaths, Option=callMax, MarketVariables=marketVariables, hyperparameters=hyperparameters)
-    timeRegressionEnd = time.time()
-    print(f"Time taken for find regressioncoefficients: {timeRegressionEnd-timeRegressionStart:f}")
-    for i in range(100):
-        # create empirical estimations
-        pricingPaths = SimulationPaths.GBMMultiDim.simulatePaths(timeStepsTotal=timeStepsTotal,pathsTotal=pathTotal, marketVariables=marketVariables, timeToMat=callMax.timeToMat)
-        timePriceStart = time.time()
-        price = priceAmericanOption(simulatedPaths=pricingPaths, Option=callMax, MarketVariables=marketVariables, hyperparameters=hyperparameters)*normalizeStrike
-        timePriceEnd = time.time()
-        print(f"Time taken for Pricing: {timePriceEnd-timePriceStart:f}")
-        print(f"The estimated price is: {price:f} and the true price is: 13.9")
-        estimates[i]=price
-    print("Mean: ", np.mean(estimates))
-    print("Std Error Mean: ", np.std(estimates)/10)
