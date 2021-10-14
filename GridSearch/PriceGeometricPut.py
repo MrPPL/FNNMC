@@ -18,6 +18,15 @@ import GridSearch.FNNMC
 f = h5py.File('Gridsearch/Data/GeometricPut/1MGeometricPut15Assets.hdf5', 'r')
 learningPaths = f['RND'][...]
 
+
+# reproducablity
+seed = 3
+import random
+import torch
+random.seed(seed)
+np.random.seed(seed)
+torch.manual_seed(seed)
+
 timeStepsTotal = 10
 normalizeStrike=40
 underlyingsTotal = 15

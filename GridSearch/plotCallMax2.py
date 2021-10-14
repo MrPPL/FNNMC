@@ -10,6 +10,46 @@ width = pd.DataFrame(data, columns= ['Width']).to_numpy()
 hiddenLayers = pd.DataFrame(data, columns=['Hidden Layers']).to_numpy()
 activationFunc = pd.DataFrame(data, columns=['Activation Function']).to_numpy()
 
+#Grouping data
+price1 = price[width==100]
+price2 = price[width==1000]
+hiddenLayers1 = hiddenLayers[width==100]
+hiddenLayers2 = hiddenLayers[width==1000]
+plt.style.use('ggplot')
+plt.plot(hiddenLayers1, price1, '*', color='Red', label='Width d+100')
+plt.plot(hiddenLayers2, price2, '+', color='Blue', label='Width d=1000')
+plt.plot(hiddenLayers,[13.902]*48, '-')
+plt.legend()
+plt.title('Grid Seach Geometric Put')
+plt.xlabel('Hidden Layers')
+plt.ylabel('Price')
+plt.show()
+
+#Grouping data
+price1 = price[width==100]
+price2 = price[width==1000]
+activationFunc1 = activationFunc[width==100]
+activationFunc2 = activationFunc[width==1000]
+
+plt.style.use('ggplot')
+plt.plot(activationFunc1, price1, '*', color='Red', label='Width d+100')
+plt.plot(activationFunc2, price2, '+', color='Blue', label='Width d=1000')
+plt.plot(activationFunc1,np.array([13.902]*12), '-')
+plt.legend()
+plt.title('Grid Seach Geometric Put')
+plt.xlabel('Hidden Layers')
+plt.ylabel('Price')
+plt.show()
+
+#Grouping data
+price1 = price[width==100]
+price2 = price[width==1000]
+hiddenLayers1 = hiddenLayers[width==100]
+hiddenLayers2 = hiddenLayers[width==1000]
+plt.plot(hiddenLayers1, price2, '+', color='Blue', label='LeakyRelu(a=0.3): d+1000')
+plt.plot(hiddenLayers2, price2, '+', color='Blue', label='LeakyRelu(a=0.3): d+1000')
+plt.plot(hiddenLayers,[13.902]*48, '-')
+#plt.show()
 
 #Grouping data
 price1 = price[np.logical_and(width==1, activationFunc=='Relu')]
@@ -55,7 +95,7 @@ plt.legend()
 plt.title('Grid Seach Call Max on Two Assets')
 plt.xlabel('Hidden Layers')
 plt.ylabel('Price')
-plt.show()
+#plt.show()
 
 #Grouping data
 price1 = price[np.logical_and(hiddenLayers==1, activationFunc=='Relu')]
@@ -102,7 +142,7 @@ plt.title('Grid Seach Call Max on Two Assets')
 plt.xscale('log',base=10) 
 plt.xlabel('Width')
 plt.ylabel('Price')
-plt.show()
+#plt.show()
 
 data = pd.read_excel(r'C:\Users\HY34WN\OneDrive - Aalborg Universitet\Documents\PhD\My_Papers\FFNNMC\gridSearch.xlsx', sheet_name='CallMax2Asset')
 price = pd.DataFrame(data, columns= ['Price']).to_numpy()
@@ -123,7 +163,7 @@ plt.title('Grid Seach Call Max on Two Assets')
 plt.xscale('log',base=10) 
 plt.xlabel('Width')
 plt.ylabel('Price')
-plt.show()
+#plt.show()
 
 
 
@@ -201,7 +241,9 @@ ax.plot3D(np.log10(width4), hiddenLayers4, price3,  "o", color="Red", label="a=0
 ax.plot3D(np.log10(width8), hiddenLayers8, price8,  "v", color="Red", label="a=0.01")
 ax.plot3D(np.log10(width12),hiddenLayers12,price12, "*", color="Red", label="a=0.3")
 plt.grid(True)
-ax.view_init(elev=10., azim=340)
-pathToSave = f'C:\\Users\\HY34WN\\OneDrive - Aalborg Universitet\\Documents\\PhD\\My_Papers\\FFNNMC\\Illustration\\GridSearch\\CallMax2\\3DWidthL.png'
-plt.savefig(pathToSave)
-plt.show()
+ax.view_init(elev=0., azim=90)
+pathToSave = f'C:\\Users\\HY34WN\\OneDrive - Aalborg Universitet\\Documents\\PhD\\My_Papers\\FFNNMC\\Illustration\\GridSearch\\CallMax2\\3DWidthCallMax2.pdf'
+#ax.view_init(elev=10., azim=340)
+#pathToSave = f'C:\\Users\\HY34WN\\OneDrive - Aalborg Universitet\\Documents\\PhD\\My_Papers\\FFNNMC\\Illustration\\GridSearch\\CallMax2\\3DWidthL.png'
+#plt.savefig(pathToSave)
+#plt.show()

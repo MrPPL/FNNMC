@@ -14,8 +14,17 @@ import Products
 import time
 import h5py
 import GridSearch.FNNMC
+
+# reproducablity
+seed = 3
+import random
+import torch
+random.seed(seed)
+np.random.seed(seed)
+torch.manual_seed(seed)
+
 # load data
-f = h5py.File('data/GeometricCall/1MAssets7.hdf5', 'r')
+f = h5py.File('data/GeometricCall/10KAssets7.hdf5', 'r')
 learningPaths = f['RND'][...]
 
 timeStepsTotal = 10
@@ -35,7 +44,7 @@ print(f"Time taken for find regressioncoefficients: {timeRegressionEnd-timeRegre
 estimates = np.zeros(100)
 for i in range(100):
     # create empirical estimations
-    g = h5py.File(f"data/GeometricCall/PricePaths/PricePath{i}.hdf5", 'r')
+    g = h5py.File(f"data/GeometricCall/PricePathsFewData/PricePath{i}.hdf5", 'r')
     pricingPaths = g['RND'][...]
     timePriceStart = time.time()
     price = GridSearch.FNNMC.priceAmericanOption(simulatedPaths=pricingPaths, Option=geometricCall, MarketVariables=marketVariables, hyperparameters=hyperparameters)*normalizeStrike

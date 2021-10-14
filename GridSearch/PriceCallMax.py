@@ -14,6 +14,15 @@ import Products
 import time
 import h5py
 import GridSearch.FNNMC
+
+# reproducablity
+seed = 3
+import random
+import torch
+random.seed(seed)
+np.random.seed(seed)
+torch.manual_seed(seed)
+
 # load data
 f = h5py.File('Gridsearch/Data/MaxCall/1MCallMax2Assets.hdf5', 'r')
 learningPaths = f['RND'][...]
@@ -25,8 +34,8 @@ underlyingsTotal = 2
 marketVariables = Products.MarketVariables(r=0.05, dividend=0.1, vol=0.2, spot=[100/normalizeStrike]*underlyingsTotal, correlation=0.0)
 
 hyperparameters = GridSearch.FNNMC.Hyperparameters(learningRate=10**(-6), inputSize=underlyingsTotal, 
-                        hiddenlayer1=underlyingsTotal+100, hiddenlayer2=underlyingsTotal+100, hiddenlayer3=underlyingsTotal+100, hiddenlayer4=underlyingsTotal+100, 
-                        epochs=1000, batchSize=10**4, trainOnlyLastTimeStep=False, patience=3)
+                        hiddenlayer1=underlyingsTotal+10, hiddenlayer2=underlyingsTotal+10, hiddenlayer3=underlyingsTotal+10, hiddenlayer4=underlyingsTotal+10, 
+                        epochs=10**4, batchSize=10**4, trainOnlyLastTimeStep=False, patience=3)
 timeRegressionStart = time.time()
 GridSearch.FNNMC.findNeuralNetworkModels(simulatedPaths=learningPaths, Option=callMax, MarketVariables=marketVariables, hyperparameters=hyperparameters)
 timeRegressionEnd = time.time()

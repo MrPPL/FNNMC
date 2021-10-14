@@ -9,7 +9,36 @@ width = pd.DataFrame(data, columns= ['Width']).to_numpy()
 hiddenLayers = pd.DataFrame(data, columns=['Hidden Layers']).to_numpy()
 activationFunc = pd.DataFrame(data, columns=['Activation Function']).to_numpy()
 
+#Grouping data
+price1 = price[width==100]
+price2 = price[width==1000]
+hiddenLayers1 = hiddenLayers[width==100]
+hiddenLayers2 = hiddenLayers[width==1000]
+plt.style.use('ggplot')
+plt.plot(hiddenLayers1, price1, '*', color='Red', label='Width d+100')
+plt.plot(hiddenLayers2, price2, '+', color='Blue', label='Width d=1000')
+plt.plot(hiddenLayers,[1.119]*48, '-')
+plt.legend()
+plt.title('Grid Seach Geometric Put')
+plt.xlabel('Hidden Layers')
+plt.ylabel('Price')
+plt.show()
 
+#Grouping data
+price1 = price[width==100]
+price2 = price[width==1000]
+activationFunc1 = activationFunc[width==100]
+activationFunc2 = activationFunc[width==1000]
+
+plt.style.use('ggplot')
+plt.plot(activationFunc1, price1, '*', color='Red', label='Width d+100')
+plt.plot(activationFunc2, price2, '+', color='Blue', label='Width d=1000')
+plt.plot(activationFunc1,np.array([1.119]*12), '-')
+plt.legend()
+plt.title('Grid Seach Geometric Put')
+plt.xlabel('Hidden Layers')
+plt.ylabel('Price')
+plt.show()
 #Grouping data
 price1 = price[np.logical_and(width==1, activationFunc=='Relu')]
 price2 = price[np.logical_and(width==1, activationFunc=='Leaky (a=0.01)')]
@@ -54,7 +83,7 @@ plt.legend()
 plt.title('Grid Seach Geometric Put')
 plt.xlabel('Hidden Layers')
 plt.ylabel('Price')
-plt.show()
+#plt.show()
 
 #Grouping data
 price1 = price[np.logical_and(hiddenLayers==1, activationFunc=='Relu')]
@@ -101,7 +130,7 @@ plt.title('Grid Seach Geometric Put')
 plt.xscale('log',base=10) 
 plt.xlabel('Width')
 plt.ylabel('Price')
-plt.show()
+#plt.show()
 
 from mpl_toolkits import mplot3d
 fig = plt.figure()
@@ -109,7 +138,7 @@ ax = plt.axes(projection='3d')
 
 # Data for a three-dimensional line
 ax.scatter3D(np.log10(width), hiddenLayers, price)
-plt.show()
+#plt.show()
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -187,7 +216,7 @@ plt.grid(True)
 ax.view_init(elev=10., azim=340)
 pathToSave = f'C:\\Users\\HY34WN\\OneDrive - Aalborg Universitet\\Documents\\PhD\\My_Papers\\FFNNMC\\Illustration\\GridSearch\\GeometricPut15\\3DWidthL.png'
 #plt.savefig(pathToSave)
-plt.show()
+#plt.show()
 
 
 
@@ -201,4 +230,4 @@ plt.title('Grid Seach Geometric Put')
 plt.xscale('log',base=10) 
 plt.xlabel('Width')
 plt.ylabel('Price')
-plt.show()
+#plt.show()

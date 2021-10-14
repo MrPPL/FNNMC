@@ -14,6 +14,15 @@ import Products
 import time
 import h5py
 import GridSearch.FNNMC
+
+# reproducablity
+seed = 3
+import random
+import torch
+random.seed(seed)
+np.random.seed(seed)
+torch.manual_seed(seed)
+
 # load data
 f = h5py.File('data/MaxCall/1MCallMax.hdf5', 'r')
 learningPaths = f['RND'][...]

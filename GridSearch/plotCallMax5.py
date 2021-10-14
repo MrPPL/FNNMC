@@ -9,6 +9,39 @@ price = pd.DataFrame(data, columns= ['Price']).to_numpy()
 width = pd.DataFrame(data, columns= ['Width']).to_numpy()
 hiddenLayers = pd.DataFrame(data, columns=['Hidden Layers']).to_numpy()
 activationFunc = pd.DataFrame(data, columns=['Activation Function']).to_numpy()
+
+#Grouping data
+price1 = price[width==100]
+price2 = price[width==1000]
+hiddenLayers1 = hiddenLayers[width==100]
+hiddenLayers2 = hiddenLayers[width==1000]
+plt.style.use('ggplot')
+plt.plot(hiddenLayers1, price1, '*', color='Red', label='Width d+100')
+plt.plot(hiddenLayers2, price2, '+', color='Blue', label='Width d=1000')
+plt.plot(hiddenLayers,[26.14]*48, '-')
+plt.legend()
+plt.title('Grid Seach Geometric Put')
+plt.xlabel('Hidden Layers')
+plt.ylabel('Price')
+plt.show()
+
+#Grouping data
+price1 = price[width==100]
+price2 = price[width==1000]
+activationFunc1 = activationFunc[width==100]
+activationFunc2 = activationFunc[width==1000]
+
+plt.style.use('ggplot')
+plt.plot(activationFunc1, price1, '*', color='Red', label='Width d+100')
+plt.plot(activationFunc2, price2, '+', color='Blue', label='Width d=1000')
+plt.plot(activationFunc1,np.array([26.14]*12), '-')
+plt.legend()
+plt.title('Grid Seach Geometric Put')
+plt.xlabel('Hidden Layers')
+plt.ylabel('Price')
+plt.show()
+
+#Grouping data
 price1 = price[np.logical_and(activationFunc=='Relu', width==1)]
 price2 = price[np.logical_and(activationFunc=='Relu', width==10)]
 price3 = price[np.logical_and(activationFunc=='Relu', width==100)]
@@ -74,10 +107,10 @@ ax.plot3D(np.log10(width8), hiddenLayers8, price8,  "v", color="Red", label="a=0
 ax.plot3D(np.log10(width12),hiddenLayers12,price12, "*", color="Red", label="a=0.3")
 plt.grid(True)
 #for ii in range(0,360,1):
-#        ax.view_init(elev=10., azim=ii)
+#        ax.view_init(elev=1., azim=ii)
 #        pathToSave = f'C:\\Users\\HY34WN\\OneDrive - Aalborg Universitet\\Documents\\PhD\\My_Papers\\FFNNMC\\Illustration\\GridSearch\\CallMax5\\Trials\\movie{ii}.png'
 #        plt.savefig(pathToSave)
-ax.view_init(elev=10., azim=340)
-pathToSave = f'C:\\Users\\HY34WN\\OneDrive - Aalborg Universitet\\Documents\\PhD\\My_Papers\\FFNNMC\\Illustration\\GridSearch\\CallMax5\\3DWidthL.png'
-plt.savefig(pathToSave)
-plt.show()
+ax.view_init(elev=0., azim=90)
+pathToSave = f'C:\\Users\\HY34WN\\OneDrive - Aalborg Universitet\\Documents\\PhD\\My_Papers\\FFNNMC\\Illustration\\GridSearch\\CallMax5\\3DWidthL.pdf'
+#plt.savefig(pathToSave)
+#plt.show()
