@@ -13,7 +13,7 @@ import numpy as np
 import Products
 import time
 import h5py
-import GridSearch.FNNMC
+import FNNMCMultiDim
 
 # reproducablity
 seed = 3
@@ -32,11 +32,11 @@ callMax = Products.Option(timeToMat=3, strike=1, typeOfContract="CallMax")
 underlyingsTotal = 2
 marketVariables = Products.MarketVariables(r=0.05, dividend=0.10, vol=0.2, spot=[100/normalizeStrike]*underlyingsTotal, correlation=0.0)
 
-hyperparameters = GridSearch.FNNMC.Hyperparameters(learningRate=10**(-5), inputSize=underlyingsTotal, 
-                        hiddenlayer1=underlyingsTotal+100, hiddenlayer2=underlyingsTotal+100, hiddenlayer3=underlyingsTotal+100, hiddenlayer4=underlyingsTotal+100, 
-                        epochs=1000, batchSize=10**4, trainOnlyLastTimeStep=False, patience=3)
+hyperparameters = FNNMCMultiDim.Hyperparameters(learningRate=10**(-5), inputSize=underlyingsTotal, 
+                        hiddenlayer1=underlyingsTotal+100, hiddenlayer2=underlyingsTotal+100, hiddenlayer3=underlyingsTotal+100, hiddenlayer4=underlyingsTotal+100, hiddenlayer5=underlyingsTotal+100, hiddenlayer6=underlyingsTotal+100, 
+                        epochs=10**4, batchSize=64, trainOnlyLastTimeStep=False, patience=3)
 timeRegressionStart = time.time()
-GridSearch.FNNMC.findNeuralNetworkModels(simulatedPaths=learningPaths, Option=callMax, MarketVariables=marketVariables, hyperparameters=hyperparameters)
+FNNMCMultiDim.findNeuralNetworkModels(simulatedPaths=learningPaths, Option=callMax, MarketVariables=marketVariables, hyperparameters=hyperparameters)
 timeRegressionEnd = time.time()
 print(f"Time taken for find regressioncoefficients: {timeRegressionEnd-timeRegressionStart:f}")
 estimates = np.zeros(100)
@@ -45,7 +45,7 @@ for i in range(100):
     g = h5py.File(f"data/MaxCall/PricePaths/PricePath{i}.hdf5", 'r')
     pricingPaths = g['RND'][...]
     timePriceStart = time.time()
-    price = GridSearch.FNNMC.priceAmericanOption(simulatedPaths=pricingPaths, Option=callMax, MarketVariables=marketVariables, hyperparameters=hyperparameters)*normalizeStrike
+    price = FNNMCMultiDim.priceAmericanOption(simulatedPaths=pricingPaths, Option=callMax, MarketVariables=marketVariables, hyperparameters=hyperparameters)*normalizeStrike
     timePriceEnd = time.time()
     estimates[i]=price
 print("Mean: ", np.mean(estimates))

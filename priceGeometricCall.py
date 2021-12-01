@@ -13,7 +13,7 @@ import numpy as np
 import Products
 import time
 import h5py
-import GridSearch.FNNMC
+import FNNMCMultiDim
 
 # reproducablity
 seed = 3
@@ -24,7 +24,7 @@ np.random.seed(seed)
 torch.manual_seed(seed)
 
 # load data
-f = h5py.File('data/GeometricCall/10KAssets7.hdf5', 'r')
+f = h5py.File('data/GeometricCall/1MAssets7.hdf5', 'r')
 learningPaths = f['RND'][...]
 
 timeStepsTotal = 10
@@ -33,22 +33,22 @@ geometricCall = Products.Option(timeToMat=1, strike=1, typeOfContract="CallGeome
 underlyingsTotal = 7
 marketVariables = Products.MarketVariables(r=0.03, dividend=0.05, vol=0.4, spot=[100/normalizeStrike]*underlyingsTotal, correlation=0.0)
 
-
-hyperparameters = GridSearch.FNNMC.Hyperparameters(learningRate=10**(-3), inputSize=underlyingsTotal, 
+hyperparameters = FNNMCMultiDim.Hyperparameters(learningRate=10**(-5), inputSize=underlyingsTotal, 
                         hiddenlayer1=underlyingsTotal+100, hiddenlayer2=underlyingsTotal+100, hiddenlayer3=underlyingsTotal+100, 
-                        hiddenlayer4=underlyingsTotal+100, epochs=1000, batchSize=10**4, trainOnlyLastTimeStep=False, patience=3)
+                        hiddenlayer4=underlyingsTotal+100, epochs=10**4, batchSize=64
+                        , trainOnlyLastTimeStep=False, patience=3)
 timeRegressionStart = time.time()
-GridSearch.FNNMC.findNeuralNetworkModels(simulatedPaths=learningPaths, Option=geometricCall, MarketVariables=marketVariables, hyperparameters=hyperparameters)
+FNNMCMultiDim.findNeuralNetworkModels(simulatedPaths=learningPaths, Option=geometricCall, MarketVariables=marketVariables, hyperparameters=hyperparameters)
 timeRegressionEnd = time.time()
 print(f"Time taken for find regressioncoefficients: {timeRegressionEnd-timeRegressionStart:f}")
 estimates = np.zeros(100)
 for i in range(100):
     # create empirical estimations
-    g = h5py.File(f"data/GeometricCall/PricePathsFewData/PricePath{i}.hdf5", 'r')
+    g = h5py.File(f"data/GeometricCall/PricePaths/PricePath{i}.hdf5", 'r')
     pricingPaths = g['RND'][...]
     timePriceStart = time.time()
-    price = GridSearch.FNNMC.priceAmericanOption(simulatedPaths=pricingPaths, Option=geometricCall, MarketVariables=marketVariables, hyperparameters=hyperparameters)*normalizeStrike
+    price = FNNMCMultiDim.priceAmericanOption(simulatedPaths=pricingPaths, Option=geometricCall, MarketVariables=marketVariables, hyperparameters=hyperparameters)*normalizeStrike
     timePriceEnd = time.time()
     estimates[i]=price
-print("Mean: ", np.mean(estimates))
+print("BatchSize: ", 64, " Mean: ", np.mean(estimates))
 print("Std Error Mean: ", np.std(estimates)/10)

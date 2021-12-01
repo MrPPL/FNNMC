@@ -9,6 +9,15 @@ import numba
 import SimulationPaths.GBM
 import Products
 
+# reproducablity
+seed = 3
+import random
+import torch
+
+random.seed(seed)
+np.random.seed(seed)
+torch.manual_seed(seed)
+
 try:
     @profile
     def f(x): return x
@@ -79,7 +88,7 @@ def priceAmericanOption(coefficientMatrix, simulatedPaths, Option, MarketVariabl
 ##########################
 if __name__ == '__main__':
     #Price American Put
-    timeStepsPerYear = 10
+    timeStepsPerYear = 1000
     normalizeStrike=40
     spot = 36
     putOption = Products.Option(timeToMat=1, strike=1,typeOfContract="Put")

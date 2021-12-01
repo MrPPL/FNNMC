@@ -36,13 +36,15 @@ class regressionDataset(torch.utils.data.Dataset):
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 #Design model
 class Net(torch.nn.Module):
-  def __init__(self, inputSize, hiddenSize1, hiddenSize2, hiddenSize3, hiddenSize4):
+  def __init__(self, hyperparameters):
     super(Net, self).__init__()
-    self.hiddenlayer1 = torch.nn.Linear(inputSize, hiddenSize1)  
-    self.hiddenlayer2 = torch.nn.Linear(hiddenSize1, hiddenSize2)
-    self.hiddenlayer3 = torch.nn.Linear(hiddenSize2, hiddenSize3)
-    self.hiddenlayer4 = torch.nn.Linear(hiddenSize3, hiddenSize4)
-    self.output = torch.nn.Linear(hiddenSize4, 1)
+    self.hiddenlayer1 = torch.nn.Linear(hyperparameters.inputSize, hyperparameters.hiddenlayer1)  
+    self.hiddenlayer2 = torch.nn.Linear(hyperparameters.hiddenlayer1, hyperparameters.hiddenlayer2)
+    self.hiddenlayer3 = torch.nn.Linear(hyperparameters.hiddenlayer2, hyperparameters.hiddenlayer3)
+    self.hiddenlayer4 = torch.nn.Linear(hyperparameters.hiddenlayer3, hyperparameters.hiddenlayer4)
+    #self.hiddenlayer5 = torch.nn.Linear(hyperparameters.hiddenlayer4, hyperparameters.hiddenlayer5)
+    #self.hiddenlayer6 = torch.nn.Linear(hyperparameters.hiddenlayer5, hyperparameters.hiddenlayer6)
+    self.output = torch.nn.Linear(hyperparameters.hiddenlayer4, 1)
 
     torch.nn.init.xavier_uniform_(self.hiddenlayer1.weight)
     torch.nn.init.zeros_(self.hiddenlayer1.bias)
@@ -52,6 +54,10 @@ class Net(torch.nn.Module):
     torch.nn.init.zeros_(self.hiddenlayer3.bias)
     torch.nn.init.xavier_uniform_(self.hiddenlayer4.weight)
     torch.nn.init.zeros_(self.hiddenlayer4.bias)
+    #torch.nn.init.xavier_uniform_(self.hiddenlayer5.weight)
+    #torch.nn.init.zeros_(self.hiddenlayer5.bias)
+    #torch.nn.init.xavier_uniform_(self.hiddenlayer6.weight)
+    #torch.nn.init.zeros_(self.hiddenlayer6.bias)
     torch.nn.init.xavier_uniform_(self.output.weight)
     torch.nn.init.zeros_(self.output.bias)
 
@@ -61,6 +67,8 @@ class Net(torch.nn.Module):
     z = relu(self.hiddenlayer2(z))
     z = relu(self.hiddenlayer3(z))
     z = relu(self.hiddenlayer4(z))
+    #z = relu(self.hiddenlayer5(z))
+    #z = relu(self.hiddenlayer6(z))
     z = self.output(z)  # no activation
     return z
 
@@ -109,13 +117,15 @@ def trainNetwork(trainingData, model, hyperparameters, timeStep):
  
 class Hyperparameters:
     # The object holds the "observable" market variables
-    def __init__(self, learningRate, inputSize, hiddenlayer1, hiddenlayer2, hiddenlayer3, hiddenlayer4, epochs, batchSize, trainOnlyLastTimeStep=False, patience=5):
+    def __init__(self, learningRate, inputSize=0, hiddenlayer1=0, hiddenlayer2=0, hiddenlayer3=0, hiddenlayer4=0, hiddenlayer5=0, hiddenlayer6=0, epochs=10**4, batchSize=10**4, trainOnlyLastTimeStep=False, patience=5):
         self.learningRate = learningRate
         self.inputSize = inputSize
         self.hiddenlayer1 = hiddenlayer1
         self.hiddenlayer2 = hiddenlayer2
         self.hiddenlayer3 = hiddenlayer3
         self.hiddenlayer4 = hiddenlayer4
+        self.hiddenlayer5 = hiddenlayer5
+        self.hiddenlayer6 = hiddenlayer6
         self.epochs = epochs
         self.batchSize = batchSize
         self.trainOnlyLastTimeStep= trainOnlyLastTimeStep
@@ -135,7 +145,7 @@ def findNeuralNetworkModels(simulatedPaths, Option, MarketVariables, hyperparame
             ValueVec = Option.payoff(simulatedPaths[:,timeStep])
             path = ".\\TrainedModels\\" + str("modelAtTimeStep") + \
                 str(timeStep) + ".pth"
-            torch.save(Net(hyperparameters.inputSize, hyperparameters.hiddenlayer1, hyperparameters.hiddenlayer2, hyperparameters.hiddenlayer3, hyperparameters.hiddenlayer4).state_dict(), path)
+            torch.save(Net(hyperparameters).state_dict(), path)
         #Find regressionscoefficients at each exercise dates before maturity
         else:
             response = np.exp(-MarketVariables.r*timeIncrement)*ValueVec
@@ -145,7 +155,7 @@ def findNeuralNetworkModels(simulatedPaths, Option, MarketVariables, hyperparame
                 #create dataset for training
                 trainingData = regressionDataset(covariates[pathsITM], response[pathsITM])
                 iterableTrainingData = torch.utils.data.DataLoader(trainingData, batch_size=hyperparameters.batchSize, shuffle=True)
-                regressionModel = Net(hyperparameters.inputSize ,hyperparameters.hiddenlayer1, hyperparameters.hiddenlayer2, hyperparameters.hiddenlayer3, hyperparameters.hiddenlayer4).to(device)
+                regressionModel = Net(hyperparameters).to(device)
                 path = ".\\TrainedModels\\" + str("modelAtTimeStep") + \
                 str(timeStep+1) + ".pth"
                 regressionModel.load_state_dict(torch.load(path))
@@ -153,7 +163,7 @@ def findNeuralNetworkModels(simulatedPaths, Option, MarketVariables, hyperparame
                 trainNetwork(trainingData=iterableTrainingData, model=regressionModel, hyperparameters=hyperparameters,
                     timeStep=timeStep)
                 #load model after training of model
-                evaluationModel = Net(hyperparameters.inputSize, hyperparameters.hiddenlayer1, hyperparameters.hiddenlayer2, hyperparameters.hiddenlayer3, hyperparameters.hiddenlayer4).to(device)
+                evaluationModel = Net(hyperparameters).to(device)
                 path = ".\\TrainedModels\\" + str("modelAtTimeStep") + \
                 str(timeStep) + ".pth"
                 evaluationModel.load_state_dict(torch.load(path))
@@ -176,7 +186,7 @@ def findNeuralNetworkModels(simulatedPaths, Option, MarketVariables, hyperparame
 def priceAmericanOption(simulatedPaths, Option, MarketVariables, hyperparameters):
     timeStepsTotal = simulatedPaths.shape[1]-1 #time 0 does not count to a timestep
     timeIncrement = Option.timeToMat/timeStepsTotal
-    regressionModel = Net(hyperparameters.inputSize,hyperparameters.hiddenlayer1, hyperparameters.hiddenlayer2, hyperparameters.hiddenlayer3, hyperparameters.hiddenlayer4).to(device)
+    regressionModel = Net(hyperparameters).to(device)
     regressionModel.eval()
     for timeStep in range(timeStepsTotal,0,-1):
         #Get payoff at maturity
@@ -203,20 +213,29 @@ def priceAmericanOption(simulatedPaths, Option, MarketVariables, hyperparameters
 import Products
 import time
 import h5py
+
+# reproducablity
+seed = 3
+import random
+import torch
+
+random.seed(seed)
+np.random.seed(seed)
+torch.manual_seed(seed)
 if __name__ == '__main__':
-    timeStepsTotal = 10
+    timeStepsTotal = 10**3
     normalizeStrike=40
     spot = 36
     pathTotal = 10**4
     putOption = Products.Option(strike=1,typeOfContract="Put", timeToMat=1)
     marketVariablesEx1 = Products.MarketVariables(r=0.06,vol=0.2, spot=spot/normalizeStrike)
     # load data
-    f = h5py.File('data/AmericanPut/1MPut.hdf5', 'r')
+    f = h5py.File('data/AmericanPut/1MPut1000K.hdf5', 'r')
     learningPaths = f['RND'][...]
     underlyingsTotal=1
     hyperparameters = Hyperparameters(learningRate=10**(-5), inputSize=underlyingsTotal, 
                             hiddenlayer1=underlyingsTotal+100, hiddenlayer2=underlyingsTotal+100, hiddenlayer3=underlyingsTotal+100, 
-                            hiddenlayer4=underlyingsTotal+100, epochs=1000, batchSize=10**4, trainOnlyLastTimeStep=False, patience=3)
+                            hiddenlayer4=underlyingsTotal+100, epochs=10**4, batchSize=64, trainOnlyLastTimeStep=False, patience=3)
     timeRegressionStart = time.time()
     findNeuralNetworkModels(simulatedPaths=learningPaths, Option=putOption, MarketVariables=marketVariablesEx1, hyperparameters=hyperparameters)
     timeRegressionEnd = time.time()
@@ -226,7 +245,7 @@ if __name__ == '__main__':
     estimates = np.zeros(repeat)
     for i in range(repeat):
         # create empirical estimations
-        g = h5py.File(f"data/AmericanPut/PricePaths/PricePath{i}.hdf5", 'r')
+        g = h5py.File(f"data/AmericanPut/PricePaths1000K/PricePath{i}.hdf5", 'r')
         pricingPaths = g['RND'][...]
         price = priceAmericanOption(simulatedPaths=pricingPaths, Option=putOption, MarketVariables=marketVariablesEx1, hyperparameters=hyperparameters)*normalizeStrike
         print(f"Spot {spot:3d} and price of American put: {price:f}")
