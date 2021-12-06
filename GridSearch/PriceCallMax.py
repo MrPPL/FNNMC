@@ -19,38 +19,38 @@ import GridSearch.FNNMC
 seed = 5
 import random
 import torch
+for patience in range(1,11,1):
+    for learningrate in range(2,7,1):
+        for batchsize in range(5,11,1):
+            random.seed(seed)
+            np.random.seed(seed)
+            torch.manual_seed(seed)
 
-for learningrate in range(2,7,1):
-    for batchsize in range(5,11,1):
-        random.seed(seed)
-        np.random.seed(seed)
-        torch.manual_seed(seed)
+            # load data
+            f = h5py.File('Gridsearch/Data/MaxCall/1MCallMax2Assets.hdf5', 'r')
+            learningPaths = f['RND'][...]
 
-        # load data
-        f = h5py.File('Gridsearch/Data/MaxCall/1MCallMax2Assets.hdf5', 'r')
-        learningPaths = f['RND'][...]
+            timeStepsTotal = 9
+            normalizeStrike=100
+            callMax = Products.Option(timeToMat=3, strike=1, typeOfContract="CallMax")
+            underlyingsTotal = 2
+            marketVariables = Products.MarketVariables(r=0.05, dividend=0.1, vol=0.2, spot=[100/normalizeStrike]*underlyingsTotal, correlation=0.0)
 
-        timeStepsTotal = 9
-        normalizeStrike=100
-        callMax = Products.Option(timeToMat=3, strike=1, typeOfContract="CallMax")
-        underlyingsTotal = 2
-        marketVariables = Products.MarketVariables(r=0.05, dividend=0.1, vol=0.2, spot=[100/normalizeStrike]*underlyingsTotal, correlation=0.0)
-
-        hyperparameters = GridSearch.FNNMC.Hyperparameters(learningRate=10**(-learningrate), inputSize=underlyingsTotal, 
-                                hiddenlayer1=underlyingsTotal+10**2, hiddenlayer2=underlyingsTotal+10**2, hiddenlayer3=underlyingsTotal+10**2, hiddenlayer4=underlyingsTotal+10**2, 
-                                epochs=10**4, batchSize=2**batchsize, trainOnlyLastTimeStep=False, patience=3)
-        timeRegressionStart = time.time()
-        GridSearch.FNNMC.findNeuralNetworkModels(simulatedPaths=learningPaths, Option=callMax, MarketVariables=marketVariables, hyperparameters=hyperparameters)
-        timeRegressionEnd = time.time()
-        print(f"Time taken for find regressioncoefficients: {timeRegressionEnd-timeRegressionStart:f}")
-        estimates = np.zeros(100)
-        for i in range(100):
-            # create empirical estimations
-            g = h5py.File(f"GridSearch/Data/MaxCall/PricePaths2Asset/PricePath{i}.hdf5", 'r')
-            pricingPaths = g['RND'][...]
-            timePriceStart = time.time()
-            price = GridSearch.FNNMC.priceAmericanOption(simulatedPaths=pricingPaths, Option=callMax, MarketVariables=marketVariables, hyperparameters=hyperparameters)*normalizeStrike
-            timePriceEnd = time.time()
-            estimates[i]=price
-        print("BatchSize: ", batchsize, " Learning rate: ", learningrate ," Mean: ", np.mean(estimates))
-        print("Std Error Mean: ", np.std(estimates)/10)
+            hyperparameters = GridSearch.FNNMC.Hyperparameters(learningRate=10**(-learningrate), inputSize=underlyingsTotal, 
+                                    hiddenlayer1=underlyingsTotal+10**2, hiddenlayer2=underlyingsTotal+10**2, hiddenlayer3=underlyingsTotal+10**2, hiddenlayer4=underlyingsTotal+10**2, 
+                                    epochs=10**4, batchSize=2**batchsize, trainOnlyLastTimeStep=False, patience=patience)
+            timeRegressionStart = time.time()
+            GridSearch.FNNMC.findNeuralNetworkModels(simulatedPaths=learningPaths, Option=callMax, MarketVariables=marketVariables, hyperparameters=hyperparameters)
+            timeRegressionEnd = time.time()
+            print(f"Time taken for find regressioncoefficients: {timeRegressionEnd-timeRegressionStart:f}")
+            estimates = np.zeros(100)
+            for i in range(100):
+                # create empirical estimations
+                g = h5py.File(f"GridSearch/Data/MaxCall/PricePaths2Asset/PricePath{i}.hdf5", 'r')
+                pricingPaths = g['RND'][...]
+                timePriceStart = time.time()
+                price = GridSearch.FNNMC.priceAmericanOption(simulatedPaths=pricingPaths, Option=callMax, MarketVariables=marketVariables, hyperparameters=hyperparameters)*normalizeStrike
+                timePriceEnd = time.time()
+                estimates[i]=price
+            print("patience: ", patience, " BatchSize: ", batchsize, " Learning rate: ", learningrate ," Mean: ", np.mean(estimates))
+            print("Std Error Mean: ", np.std(estimates)/10)
