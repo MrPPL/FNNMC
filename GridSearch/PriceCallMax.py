@@ -19,7 +19,7 @@ import GridSearch.FNNMC
 seed = 5
 import random
 import torch
-for patience in range(1,11,1):
+for patience in range(6,11,1):
     for learningrate in range(2,7,1):
         for batchsize in range(5,11,1):
             random.seed(seed)
@@ -27,7 +27,7 @@ for patience in range(1,11,1):
             torch.manual_seed(seed)
 
             # load data
-            f = h5py.File('Gridsearch/Data/MaxCall/1MCallMax2Assets.hdf5', 'r')
+            f = h5py.File(".\Gridsearch\Data\MaxCall\1MCallMax2Assets.hdf5", "r")
             learningPaths = f['RND'][...]
 
             timeStepsTotal = 9
@@ -46,7 +46,7 @@ for patience in range(1,11,1):
             estimates = np.zeros(100)
             for i in range(100):
                 # create empirical estimations
-                g = h5py.File(f"GridSearch/Data/MaxCall/PricePaths2Asset/PricePath{i}.hdf5", 'r')
+                g = h5py.File(f"GridSearch\Data\MaxCall\PricePaths2Asset\PricePath{i}.hdf5", "r")
                 pricingPaths = g['RND'][...]
                 timePriceStart = time.time()
                 price = GridSearch.FNNMC.priceAmericanOption(simulatedPaths=pricingPaths, Option=callMax, MarketVariables=marketVariables, hyperparameters=hyperparameters)*normalizeStrike

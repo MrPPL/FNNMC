@@ -9,6 +9,7 @@ The only difference in the regression phase
 
 import LSM
 import numpy as np
+import os
 
 #############
 # Data preparation
@@ -110,7 +111,7 @@ def trainNetwork(trainingData, model, hyperparameters, timeStep):
         if (hyperparameters.trainOnlyLastTimeStep==True):
             hyperparameters.epochs = 1
 
-    path = ".\\TrainedModels\\" + str("modelAtTimeStep") + \
+    path =  os.path.join(".", "TrainedModels", str("modelAtTimeStep") + str(timeStep) + ".pth")
     str(timeStep) + ".pth"
     torch.save(model.state_dict(), path)
     print("\nDone ")
@@ -143,8 +144,7 @@ def findNeuralNetworkModels(simulatedPaths, Option, MarketVariables, hyperparame
         #Get payoff at maturity
         if(timeStep== (timeStepsTotal) ):
             ValueVec = Option.payoff(simulatedPaths[:,timeStep])
-            path = ".\\TrainedModels\\" + str("modelAtTimeStep") + \
-                str(timeStep) + ".pth"
+            path = os.path.join(".", "TrainedModels", str("modelAtTimeStep") + str(timeStep) + ".pth")
             torch.save(Net(hyperparameters).state_dict(), path)
         #Find regressionscoefficients at each exercise dates before maturity
         else:
@@ -156,16 +156,14 @@ def findNeuralNetworkModels(simulatedPaths, Option, MarketVariables, hyperparame
                 trainingData = regressionDataset(covariates[pathsITM], response[pathsITM])
                 iterableTrainingData = torch.utils.data.DataLoader(trainingData, batch_size=hyperparameters.batchSize, shuffle=True)
                 regressionModel = Net(hyperparameters).to(device)
-                path = ".\\TrainedModels\\" + str("modelAtTimeStep") + \
-                str(timeStep+1) + ".pth"
+                path = os.path.join(".", "TrainedModels", str("modelAtTimeStep") + str(timeStep+1) + ".pth")
                 regressionModel.load_state_dict(torch.load(path))
 
                 trainNetwork(trainingData=iterableTrainingData, model=regressionModel, hyperparameters=hyperparameters,
                     timeStep=timeStep)
                 #load model after training of model
                 evaluationModel = Net(hyperparameters).to(device)
-                path = ".\\TrainedModels\\" + str("modelAtTimeStep") + \
-                str(timeStep) + ".pth"
+                path = os.path.join(".", "TrainedModels", str("modelAtTimeStep") + str(timeStep) + ".pth")
                 evaluationModel.load_state_dict(torch.load(path))
                 with torch.no_grad():
                     expectedContinuationValue = evaluationModel(torch.tensor(covariates.reshape(-1,1), dtype=torch.float32).to(device))
@@ -196,8 +194,7 @@ def priceAmericanOption(simulatedPaths, Option, MarketVariables, hyperparameters
         else:
             continuationValue = np.exp(-MarketVariables.r*timeIncrement)*ValueVec
             covariates = simulatedPaths[:,timeStep]
-            path = ".\\TrainedModels\\" + str("modelAtTimeStep") + \
-                str(timeStep) + ".pth"
+            path = os.path.join(".", "TrainedModels", str("modelAtTimeStep") + str(timeStep) + ".pth")
             regressionModel.load_state_dict(torch.load(path))
             with torch.no_grad():
                 expectedContinuationValue = regressionModel(torch.tensor(covariates.reshape(-1,1), dtype=torch.float32).to(device))            

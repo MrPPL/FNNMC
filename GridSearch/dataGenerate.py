@@ -15,24 +15,29 @@ import SimulationPaths.GBMMultiDim
 import time
 import h5py
 
-timeStepsTotal = 9
-normalizeStrike=100
-callGeometricAverage = Products.Option(timeToMat=3, strike=1, typeOfContract="CallMax")
-marketVariables = Products.MarketVariables(r=0.05, dividend=0.1, vol=0.2, spot=[100/normalizeStrike]*2, correlation=0.0)
+
+#timeStepsTotal = 9
+#normalizeStrike=100
+#callGeometricAverage = Products.Option(timeToMat=3, strike=1, typeOfContract="CallMax")
+#marketVariables = Products.MarketVariables(r=0.05, dividend=0.1, vol=0.2, spot=[100/normalizeStrike]*2, correlation=0.0)
+
+timeStepsTotal = 10
+normalizeStrike=40
+PutGeometricAverage = Products.Option(timeToMat=1, strike=1, typeOfContract="PutGeometricAverage")
+marketVariables = Products.MarketVariables(r=0.06, dividend=0.0, vol=0.2, spot=[40/normalizeStrike]*15, correlation=0.25)
 
 timeSimPathsStart = time.time()
-learningPaths = SimulationPaths.GBMMultiDim.simulatePaths(timeStepsTotal=timeStepsTotal,pathsTotal=10**6, marketVariables=marketVariables, timeToMat=callGeometricAverage.timeToMat)
+learningPaths = SimulationPaths.GBMMultiDim.simulatePaths(timeStepsTotal=timeStepsTotal,pathsTotal=10**2, marketVariables=marketVariables, timeToMat=PutGeometricAverage.timeToMat)
 timeSimPathsEnd = time.time()
 print(f"Time taken to simulate paths is: {timeSimPathsEnd-timeSimPathsStart:f}")
 ##Safe data
-f = h5py.File('Gridsearch/Data/MaxCall/1MCallMax2Assets.hdf5', 'w')
-f.create_dataset('RND', data = learningPaths)
-f.close()
+with h5py.File(os.path.join("GridSearch", "Data", "GeometricPut", "100GeometricPut15Assets.hdf5"), "w") as f:
+    dset = f.create_dataset("RND", data=learningPaths)
 
 for i in range(100):
     # create empirical estimations
-    pricingPaths = SimulationPaths.GBMMultiDim.simulatePaths(timeStepsTotal=timeStepsTotal,pathsTotal=10**4, marketVariables=marketVariables, timeToMat=callGeometricAverage.timeToMat)
-    g = h5py.File(f"GridSearch/Data/MaxCall/PricePaths2Asset/PricePath{i}.hdf5", 'w')
+    pricingPaths = SimulationPaths.GBMMultiDim.simulatePaths(timeStepsTotal=timeStepsTotal,pathsTotal=10**2, marketVariables=marketVariables, timeToMat=PutGeometricAverage.timeToMat)
+    g = h5py.File(os.path.join("GridSearch", "Data", "GeometricPut", "SmallPricePaths15Asset", f"PricePath{i}.hdf5"), "w")
     g.create_dataset('RND', data = pricingPaths)
     g.close()
     print(i)
