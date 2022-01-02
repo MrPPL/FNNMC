@@ -76,6 +76,9 @@ def updateState(currentState, marketVariables, timeIncrement):
     lowerTriangleMatrix = choleskyLowerTriangular(assetsTotal, marketVariables.vol, marketVariables.correlation)
     for path in range(pathsTotal):
         rNormVec = rng.standard_normal(assetsTotal)
+        if(assetsTotal>1):
+            #Normalize random variables to mean 0 and standard diviation 1
+            rNormVec = (rNormVec - np.mean(rNormVec)) / np.std(rNormVec)
         newState[path,:] = [GBMUpdate(spot=currentState[path,assetIndex], marketVariables=marketVariables, timeIncrement=timeIncrement,
             lowerTriangleMatrixRow=lowerTriangleMatrix[assetIndex,:], normVec=rNormVec) for assetIndex in range(assetsTotal)]
 

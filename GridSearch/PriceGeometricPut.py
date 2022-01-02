@@ -19,9 +19,9 @@ seed = 5
 import random
 import torch
 
-for patience in range(1,11,1):
-    for learningrate in range(2,7,1):
-        for batchsize in range(1,11,1):
+for patience in range(6,11,1):
+    for learningrate in range(5,7,1):
+        for batchsize in range(5,11,1):
             random.seed(seed)
             np.random.seed(seed)
             torch.manual_seed(seed)
