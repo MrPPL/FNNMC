@@ -84,7 +84,7 @@ def trainNetwork(trainingData, model, hyperparameters, timeStep):
     optimizer = torch.optim.Adam(model.parameters(), lr=hyperparameters.learningRate)
     bestEpoch_loss = 0.0 #Parameter to keep track of performance improvement
     notImprovedEpoch = 0 #count number of improved iterations
-    path =  os.path.join(".", "TrainedModels", str("modelAtTimeStep") + str(timeStep) + ".pth") #path to save trained model
+    path =  os.path.join(".", "TrainedModels", "modelAtTimeStep" + str(timeStep) + ".pth") #path to save trained model
     for epoch in range(0, hyperparameters.epochs):
         torch.manual_seed(1 + epoch)  # recovery reproduce
         epoch_loss = 0.0  # sum avg loss per item
