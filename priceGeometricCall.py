@@ -24,7 +24,7 @@ np.random.seed(seed)
 torch.manual_seed(seed)
 
 # load data
-f = h5py.File('data/GeometricCall/1MAssets7.hdf5', 'r')
+f = h5py.File(os.path.join('data','GeometricCall', '1MAssets7.hdf5'), 'r')
 learningPaths = f['RND'][...]
 
 timeStepsTotal = 10
@@ -35,7 +35,7 @@ marketVariables = Products.MarketVariables(r=0.03, dividend=0.05, vol=0.4, spot=
 
 hyperparameters = FNNMCMultiDim.Hyperparameters(learningRate=10**(-5), inputSize=underlyingsTotal, 
                         hiddenlayer1=underlyingsTotal+100, hiddenlayer2=underlyingsTotal+100, hiddenlayer3=underlyingsTotal+100, 
-                        hiddenlayer4=underlyingsTotal+100, epochs=10**4, batchSize=64
+                        hiddenlayer4=underlyingsTotal+100, epochs=10**4, batchSize=256
                         , trainOnlyLastTimeStep=False, patience=3)
 timeRegressionStart = time.time()
 FNNMCMultiDim.findNeuralNetworkModels(simulatedPaths=learningPaths, Option=geometricCall, MarketVariables=marketVariables, hyperparameters=hyperparameters)
@@ -44,11 +44,11 @@ print(f"Time taken for find regressioncoefficients: {timeRegressionEnd-timeRegre
 estimates = np.zeros(100)
 for i in range(100):
     # create empirical estimations
-    g = h5py.File(f"data/GeometricCall/PricePaths/PricePath{i}.hdf5", 'r')
+    g = h5py.File(os.path.join("data", "GeometricCall","PricePaths", f"PricePath{i}.hdf5"), 'r')
     pricingPaths = g['RND'][...]
     timePriceStart = time.time()
     price = FNNMCMultiDim.priceAmericanOption(simulatedPaths=pricingPaths, Option=geometricCall, MarketVariables=marketVariables, hyperparameters=hyperparameters)*normalizeStrike
     timePriceEnd = time.time()
     estimates[i]=price
-print("BatchSize: ", 64, " Mean: ", np.mean(estimates))
+print("BatchSize: ", 256, " Mean: ", np.mean(estimates))
 print("Std Error Mean: ", np.std(estimates)/10)

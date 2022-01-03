@@ -27,28 +27,28 @@ import h5py
 #############
 # American Put
 ############
-timeStepsTotal = 1000
-normalizeStrike=40
-spot = 36
-putOption = Products.Option(timeToMat=1, strike=1, typeOfContract="Put")
-marketVariables = Products.MarketVariables(r=0.06,vol=0.2, spot=spot/normalizeStrike)
-learningPaths= SimulationPaths.GBM.generateSDEStockPaths(pathTotal=10**6, timeStepsPerYear=timeStepsTotal, timeToMat=putOption.timeToMat, MarketVariables=marketVariables)
-##Safe data
-f = h5py.File('data/AmericanPut/1MPut1000K.hdf5', 'w')
-f.create_dataset('RND', data = learningPaths)
-f.close()
-#
-for i in range(100):
-    # create empirical estimations
-    pricingPaths = SimulationPaths.GBM.generateSDEStockPaths(pathTotal=10**4, timeStepsPerYear=timeStepsTotal, timeToMat=putOption.timeToMat, MarketVariables=marketVariables)
-    g = h5py.File(f"data/AmericanPut/PricePaths1000K/PricePath{i}.hdf5", 'w')
-    g.create_dataset('RND', data = pricingPaths)
-    g.close()
-    print(i)
+#timeStepsTotal = 1000
+#normalizeStrike=40
+#spot = 36
+#putOption = Products.Option(timeToMat=1, strike=1, typeOfContract="Put")
+#marketVariables = Products.MarketVariables(r=0.06,vol=0.2, spot=spot/normalizeStrike)
+#learningPaths= SimulationPaths.GBM.generateSDEStockPaths(pathTotal=10**6, timeStepsPerYear=timeStepsTotal, timeToMat=putOption.timeToMat, MarketVariables=marketVariables)
+###Safe data
+#f = h5py.File('data/AmericanPut/1MPut1000K.hdf5', 'w')
+#f.create_dataset('RND', data = learningPaths)
+#f.close()
+##
+#for i in range(100):
+#    # create empirical estimations
+#    pricingPaths = SimulationPaths.GBM.generateSDEStockPaths(pathTotal=10**4, timeStepsPerYear=timeStepsTotal, timeToMat=putOption.timeToMat, MarketVariables=marketVariables)
+#    g = h5py.File(f"data/AmericanPut/PricePaths1000K/PricePath{i}.hdf5", 'w')
+#    g.create_dataset('RND', data = pricingPaths)
+#    g.close()
+#    print(i)
 ######################
 # American Call Max option on two stocks
 ########################
-import SimulationPaths.GBMMultiDim
+#import SimulationPaths.GBMMultiDim
 #timeStepsTotal = 9
 #normalizeStrike=100
 #callMax = Products.Option(timeToMat=3, strike=1, typeOfContract="CallMax")
@@ -76,27 +76,27 @@ import SimulationPaths.GBMMultiDim
 ####################
 # American Geometric Average option on 7 stocks
 #####################
-#import SimulationPaths.GBMMultiDim
-#timeStepsTotal = 10
-#normalizeStrike=100
-#geometricCall = Products.Option(timeToMat=1, strike=1, typeOfContract="CallGeometricAverage")
-#underlyingsTotal = 7
-#marketVariables = Products.MarketVariables(r=0.03, dividend=0.05, vol=0.4, spot=[100/normalizeStrike]*underlyingsTotal, correlation=0.0)
-#
-#timeSimPathsStart = time.time()
-#learningPaths = SimulationPaths.GBMMultiDim.simulatePaths(timeStepsTotal=timeStepsTotal,pathsTotal=10**4, marketVariables=marketVariables, timeToMat=geometricCall.timeToMat)
-#timeSimPathsEnd = time.time()
-#print(f"Time taken to simulate paths is: {timeSimPathsEnd-timeSimPathsStart:f}")
-###Safe data
-#f = h5py.File('data/GeometricCall/10KAssets7.hdf5', 'w')
-#f.create_dataset('RND', data = learningPaths)
-#f.close()
-#
-#estimates = np.zeros(100)
-#for i in range(100):
-#    # create empirical estimations
-#    pricingPaths = SimulationPaths.GBMMultiDim.simulatePaths(timeStepsTotal=timeStepsTotal,pathsTotal=10**3, marketVariables=marketVariables, timeToMat=geometricCall.timeToMat)
-#    g = h5py.File(f"data/GeometricCall/PricePathsFewData/PricePath{i}.hdf5", 'w')
-#    g.create_dataset('RND', data = pricingPaths)
-#    g.close()
-#    print(i)
+import SimulationPaths.GBMMultiDim
+timeStepsTotal = 10
+normalizeStrike=100
+geometricCall = Products.Option(timeToMat=1, strike=1, typeOfContract="CallGeometricAverage")
+underlyingsTotal = 7
+marketVariables = Products.MarketVariables(r=0.03, dividend=0.05, vol=0.4, spot=[100/normalizeStrike]*underlyingsTotal, correlation=0.0)
+
+timeSimPathsStart = time.time()
+learningPaths = SimulationPaths.GBMMultiDim.simulatePaths(timeStepsTotal=timeStepsTotal,pathsTotal=10**6, marketVariables=marketVariables, timeToMat=geometricCall.timeToMat)
+timeSimPathsEnd = time.time()
+print(f"Time taken to simulate paths is: {timeSimPathsEnd-timeSimPathsStart:f}")
+##Safe data
+f = h5py.File('data/GeometricCall/1MAssets7.hdf5', 'w')
+f.create_dataset('RND', data = learningPaths)
+f.close()
+
+estimates = np.zeros(100)
+for i in range(100):
+    # create empirical estimations
+    pricingPaths = SimulationPaths.GBMMultiDim.simulatePaths(timeStepsTotal=timeStepsTotal,pathsTotal=10**4, marketVariables=marketVariables, timeToMat=geometricCall.timeToMat)
+    g = h5py.File(f"data/GeometricCall/PricePaths/PricePath{i}.hdf5", 'w')
+    g.create_dataset('RND', data = pricingPaths)
+    g.close()
+    print(i)

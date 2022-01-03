@@ -93,6 +93,7 @@ def trainNetwork(trainingData, model, hyperparameters, timeStep):
     bestEpoch_loss = 0.0 #Parameter to keep track of performance improvement
     notImprovedEpoch = 0 #count number of improved iterations
     trainedEpochs = 0 #count the number of epochs used for training
+    path =  os.path.join(".", "TrainedModels", str("modelAtTimeStep") + str(timeStep) + ".pth") #path for saving model
     for epoch in range(0, hyperparameters.epochs):
         torch.manual_seed(1 + epoch)  # recovery reproduce
         epoch_loss = 0.0  # sum avg loss per item
@@ -112,8 +113,9 @@ def trainNetwork(trainingData, model, hyperparameters, timeStep):
         if(bestEpoch_loss>epoch_loss or epoch==0):
             bestEpoch_loss = epoch_loss
             notImprovedEpoch=0
-        elif(notImprovedEpoch>=hyperparameters.patience):
             trainedEpochs = epoch
+            torch.save(model.state_dict(), path)
+        elif(notImprovedEpoch>=hyperparameters.patience):
             break
         else:
             notImprovedEpoch = notImprovedEpoch + 1
@@ -121,8 +123,6 @@ def trainNetwork(trainingData, model, hyperparameters, timeStep):
         if (hyperparameters.trainOnlyLastTimeStep==True):
             hyperparameters.epochs = 1
 
-    path =  os.path.join(".", "TrainedModels", str("modelAtTimeStep") + str(timeStep) + ".pth")
-    torch.save(model.state_dict(), path)
     #print("Number of trained Epochs:", trainedEpochs)
  
 

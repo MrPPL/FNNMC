@@ -24,7 +24,7 @@ np.random.seed(seed)
 torch.manual_seed(seed)
 
 # load data
-f = h5py.File('data/MaxCall/1MCallMax.hdf5', 'r')
+f = h5py.File(os.path.join('data','MaxCall', '1MCallMax.hdf5'), 'r')
 learningPaths = f['RND'][...]
 timeStepsTotal = 9
 normalizeStrike=100
@@ -33,8 +33,8 @@ underlyingsTotal = 2
 marketVariables = Products.MarketVariables(r=0.05, dividend=0.10, vol=0.2, spot=[100/normalizeStrike]*underlyingsTotal, correlation=0.0)
 
 hyperparameters = FNNMCMultiDim.Hyperparameters(learningRate=10**(-5), inputSize=underlyingsTotal, 
-                        hiddenlayer1=underlyingsTotal+100, hiddenlayer2=underlyingsTotal+100, hiddenlayer3=underlyingsTotal+100, hiddenlayer4=underlyingsTotal+100, hiddenlayer5=underlyingsTotal+100, hiddenlayer6=underlyingsTotal+100, 
-                        epochs=10**4, batchSize=64, trainOnlyLastTimeStep=False, patience=3)
+                        hiddenlayer1=underlyingsTotal+100, hiddenlayer2=underlyingsTotal+100, hiddenlayer3=underlyingsTotal+100, hiddenlayer4=underlyingsTotal+100, 
+                        epochs=10**4, batchSize=256, trainOnlyLastTimeStep=False, patience=3)
 timeRegressionStart = time.time()
 FNNMCMultiDim.findNeuralNetworkModels(simulatedPaths=learningPaths, Option=callMax, MarketVariables=marketVariables, hyperparameters=hyperparameters)
 timeRegressionEnd = time.time()
@@ -42,7 +42,7 @@ print(f"Time taken for find regressioncoefficients: {timeRegressionEnd-timeRegre
 estimates = np.zeros(100)
 for i in range(100):
     # create empirical estimations
-    g = h5py.File(f"data/MaxCall/PricePaths/PricePath{i}.hdf5", 'r')
+    g = h5py.File(os.path.join("data", "MaxCall", "PricePaths", f"PricePath{i}.hdf5"), 'r')
     pricingPaths = g['RND'][...]
     timePriceStart = time.time()
     price = FNNMCMultiDim.priceAmericanOption(simulatedPaths=pricingPaths, Option=callMax, MarketVariables=marketVariables, hyperparameters=hyperparameters)*normalizeStrike
