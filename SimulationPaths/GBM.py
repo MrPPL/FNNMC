@@ -19,6 +19,6 @@ def generateSDEStockPaths(pathTotal, timeStepsPerYear, timeToMat, MarketVariable
     for timeStep in range(1,timeStepsTotal+1):
         if(pathTotal>1):
             #Normalize random variables to mean 0 and standard diviation 1
-            rNorm[:,timeStep-1] = (rNorm[:,timeStep-1] - np.mean(rNorm[:,timeStep-1])) / np.std(rNorm[:,timeStep])
+            rNorm[:,timeStep-1] = (rNorm[:,timeStep-1] - np.mean(rNorm[:,timeStep-1])) / np.std(rNorm[:,timeStep-1])
         paths[:,timeStep] = generateTimeStepStock(timeIncrement, rNorm[:,timeStep-1], MarketVariables, paths[:,timeStep-1])
     return paths
