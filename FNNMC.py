@@ -98,8 +98,6 @@ def trainNetwork(trainingData, model, hyperparameters, timeStep):
             loss_val.backward() # Compute gradient
             optimizer.step() #parameter update
 
-        print(" epoch = %4d   loss = %0.4f" % \
-        (epoch, epoch_loss))
         #Early stopping
         if(bestEpoch_loss>epoch_loss or epoch==0):
             bestEpoch_loss = epoch_loss
@@ -113,7 +111,7 @@ def trainNetwork(trainingData, model, hyperparameters, timeStep):
         if (hyperparameters.trainOnlyLastTimeStep==True):
             hyperparameters.epochs = 1
 
-    print("\nDone ")
+    print("Epochs: ", epoch)
  
 class Hyperparameters:
     # The object holds the "observable" market variables

@@ -27,21 +27,21 @@ import h5py
 #############
 # American Put
 ############
-timeStepsTotal = 1000
+timeStepsTotal = 100
 normalizeStrike= 40
 spot = 36
 putOption = Products.Option(timeToMat=1, strike=1, typeOfContract="Put")
 marketVariables = Products.MarketVariables(r=0.06,vol=0.2, spot=spot/normalizeStrike)
 learningPaths= SimulationPaths.GBM.generateSDEStockPaths(pathTotal=10**6, timeStepsPerYear=timeStepsTotal, timeToMat=putOption.timeToMat, MarketVariables=marketVariables)
 ##Safe data
-f = h5py.File(os.path.join('data', 'AmericanPut', '1MPut1000K.hdf5'), 'w')
+f = h5py.File(os.path.join('data', 'AmericanPut', '1MPut100K.hdf5'), 'w')
 f.create_dataset('RND', data = learningPaths)
 f.close()
 #
 for i in range(100):
     # create empirical estimations
     pricingPaths = SimulationPaths.GBM.generateSDEStockPaths(pathTotal=10**4, timeStepsPerYear=timeStepsTotal, timeToMat=putOption.timeToMat, MarketVariables=marketVariables)
-    g = h5py.File(os.path.join("data", "AmericanPut", "PricePaths1000K", f"PricePath{i}.hdf5"), 'w')
+    g = h5py.File(os.path.join("data", "AmericanPut", "PricePaths100K", f"PricePath{i}.hdf5"), 'w')
     g.create_dataset('RND', data = pricingPaths)
     g.close()
     print(i)
