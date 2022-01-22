@@ -20,4 +20,4 @@ Hereafter, run "price{optionName}.py" to get a price and standard error.
 The paper is inspired by Glasserman's book "Monte Carlo Methods in Financial Engineering”.
 
 ## Author
-You can see my other projects at [Peter Pommergård Lind]{https://mrppl.github.io/}
+You can see my other projects at [Peter Pommergård Lind](https://mrppl.github.io/)
